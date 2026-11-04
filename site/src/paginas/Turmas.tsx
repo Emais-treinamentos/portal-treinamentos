@@ -91,12 +91,12 @@ export function Acompanhar() {
       {turmas.dados && (
         <div className="tabela-rolagem">
           <table className="tabela">
-            <thead><tr><th>Treinamento</th><th>Instrutor</th><th>Data</th><th>Horário</th><th>Sala</th><th>Participantes</th><th>Status</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Treinamento e instrutor</th><th>Data e horário</th><th>Sala</th><th>Pessoas</th><th>Status</th><th>Ações</th></tr></thead>
             <tbody>
-              {!linhas.length && <tr><td colSpan={8}>Nenhum treinamento nesta situação.</td></tr>}
+              {!linhas.length && <tr><td colSpan={6}>Nenhum treinamento nesta situação.</td></tr>}
               {linhas.map((t) => (
                 <tr key={t.id}>
-                  <td>{t.treinamento}</td><td>{t.instrutor_email}</td><td>{dataBR(t.data)}</td><td>{hora(t.hora)}</td><td>{t.sala}</td><td>{t.participantes}</td>
+                  <td><strong className="celula-nome">{t.treinamento}</strong><small className="celula-apoio">{t.instrutor_email}</small></td><td className="celula-sem-quebra">{dataBR(t.data)} {hora(t.hora)}</td><td>{t.sala}</td><td>{t.participantes}</td>
                   <td><Farol cor={corTurma(t)} /> {resumoTurma(t)}</td>
                   <td><button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setSel(t.id)}>Ver</button></td>
                 </tr>

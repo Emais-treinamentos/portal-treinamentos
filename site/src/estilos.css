@@ -2370,10 +2370,12 @@ h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
   .painel-grade { grid-template-columns: minmax(0, 1fr); }
 }
 .menu a svg { flex: none; }
-.lateral { flex-basis: 288px; }
-.tabela th, .tabela td { white-space: normal; overflow-wrap: anywhere; }
-.tabela .linha-acoes { flex-wrap: wrap; gap: 6px; }
+.lateral { flex-basis: 272px; }
+.menu a { font-size: 0.92rem; }
+.tabela th, .tabela td { white-space: normal; overflow-wrap: normal; }
+.tabela .linha-acoes { flex-wrap: nowrap; gap: 6px; }
 .tabela .botao-pequeno { white-space: nowrap; }
 .celula-nome { display: block; font-weight: 500; }
-.celula-apoio { display: block; font-size: 0.82rem; color: var(--suave); }
+.celula-apoio { display: block; font-size: 0.82rem; color: var(--suave); overflow-wrap: anywhere; }
+.celula-sem-quebra { white-space: nowrap !important; }
 .painel-grade .tabela th, .painel-grade .tabela td { padding-left: 12px; padding-right: 12px; }
