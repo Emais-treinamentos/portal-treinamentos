@@ -115,10 +115,10 @@ function Documento({ id, aoVoltar }: { id: string; aoVoltar: () => void }) {
               <tr><th>Setor / Área</th><td colSpan={3}>{s.colaborador.departamento}</td></tr>
             </tbody></table>
             <table className="doc-treinamentos">
-              <thead><tr><th>#</th><th>Treinamento</th><th>C.H.</th><th>Data</th><th>Status</th><th>Cód. Registro da Turma</th></tr></thead>
+              <thead><tr><th>#</th><th>Treinamento</th><th>C.H.</th><th>Data</th><th>Status</th><th>Cód. Assinatura Instrutor</th></tr></thead>
               <tbody>
                 {!feitos.length && <tr><td colSpan={6}>Nenhum treinamento registrado</td></tr>}
-                {feitos.map((h, i) => <tr key={h.turma_id}><td>{i + 1}</td><td>{h.treinamento}</td><td>{cargaTexto(h.carga_minutos)}</td><td>{dataBR(h.data)}</td><td><strong>Realizado</strong></td><td>{h.turma_id.slice(0, 8).toUpperCase()}</td></tr>)}
+                {feitos.map((h, i) => <tr key={h.turma_id}><td>{i + 1}</td><td>{h.treinamento}</td><td>{cargaTexto(h.carga_minutos)}</td><td>{dataBR(h.data)}</td><td><strong>Realizado</strong></td><td>{h.codigo}</td></tr>)}
               </tbody>
             </table>
             <p className="doc-total">Carga Horária Total: {cargaTexto(feitos.reduce((a, h) => a + h.carga_minutos, 0))}</p>

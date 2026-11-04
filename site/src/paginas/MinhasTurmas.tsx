@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Pagina, Mensagem } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Campo, Farol, FormDialogo, SeloSituacao } from '../componentes/Pecas';
+import { Dialogo } from '../componentes/Dialogo';
+import { Calendario, type EventoCal } from '../componentes/Calendario';
+import { baixarIcs, linkOutlook, type EventoAgenda } from '../lib/calendario';
 import { cargaTexto, dataBR, hora, horaFim, nomesStatus, nomesTipoSolicitacao, rpc, textoErro, useDados, type TurmaDetalhe } from '../lib/api';
 
 type Minha = { id: string; treinamento: string; status: string; etapa: string; data: string | null; hora: string | null; sala: string | null; participantes: number; pendentes: number; solicitacao_aberta: boolean };
@@ -11,18 +14,33 @@ const grupos: [string, string, string[]][] = [
 ];
 
 export function MinhasTurmas() {
+  return <TurmasInstrutor titulo="Minhas turmas" apoio="Confirme a agenda, peça alterações e registre a presença por aqui." grupos={grupos} vazio="Você não tem turmas como instrutor." />;
+}
+
+export function ConfirmarAgenda() {
+  return <TurmasInstrutor titulo="Confirmar Agenda" apoio="Confirme os treinamentos que você vai aplicar, proponha outro horário ou recuse."
+    grupos={[['confirmar', 'Aguardando sua confirmação', ['aguardando_instrutor']], ['formalizar', 'Confirmados, aguardando convite', ['formalizar']], ['agendadas', 'Agendados', ['agendadas']]]} vazio="Nenhum treinamento para confirmar." />;
+}
+
+export function PresencaInstrutor() {
+  return <TurmasInstrutor titulo="Presença" apoio="Marque quem participou. Cada presente recebe um código único, que aparece na lista de presença do colaborador."
+    grupos={[['presenca', 'Registrar presença', ['presenca']], ['realizadas', 'Concluídos', ['realizadas']]]} vazio="Nenhum treinamento com presença a registrar." />;
+}
+
+function TurmasInstrutor({ titulo, apoio, grupos, vazio }: { titulo: string; apoio: string; grupos: [string, string, string[]][]; vazio: string }) {
   const lista = useDados(() => rpc<Minha[]>('minhas_turmas'));
   const [sel, setSel] = useState<string | null>(null);
+  const visiveis = (lista.dados ?? []).filter((t) => grupos.some(([, , es]) => es.includes(t.etapa)));
   return (
-    <Pagina titulo="Minhas turmas" apoio="Confirme a agenda, peça alterações e registre a presença por aqui. Os dados são sempre os atuais da turma.">
+    <Pagina titulo={titulo} apoio={apoio}>
       {lista.erro && <Mensagem tipo="erro">{lista.erro}</Mensagem>}
       {lista.carregando && !lista.dados && <Carregando />}
-      {lista.dados && !lista.dados.length && <p className="vazio">Você não tem turmas como instrutor.</p>}
-      {!!lista.dados?.length && (
+      {lista.dados && !visiveis.length && <p className="vazio">{vazio}</p>}
+      {!!visiveis.length && (
         <div className="mestre-detalhe">
           <div>
             {grupos.map(([g, nome, es]) => {
-              const itens = lista.dados!.filter((t) => es.includes(t.etapa));
+              const itens = visiveis.filter((t) => es.includes(t.etapa));
               if (!itens.length) return null;
               return (
                 <section key={g}>
@@ -40,14 +58,44 @@ export function MinhasTurmas() {
               );
             })}
           </div>
-          {sel ? <PainelInstrutor id={sel} aoMudar={() => void lista.recarregar()} /> : <p className="vazio">Escolha uma turma.</p>}
+          {sel ? <PainelInstrutor id={sel} aoMudar={() => void lista.recarregar()} /> : <p className="vazio">Escolha um treinamento.</p>}
         </div>
       )}
     </Pagina>
   );
 }
 
-function PainelInstrutor({ id, aoMudar }: { id: string; aoMudar: () => void }) {
+const corCalendario = (t: Minha): EventoCal['cor'] => (t.etapa === 'presenca' ? 'presenca' : t.etapa === 'realizadas' ? 'feito' : t.etapa === 'agendadas' || t.etapa === 'formalizar' ? 'confirmado' : 'aguardando');
+
+export function CalendarioInstrutor() {
+  const lista = useDados(() => rpc<Minha[]>('minhas_turmas'));
+  const [sel, setSel] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const eventos: EventoCal[] = (lista.dados ?? []).filter((t) => t.data).map((t) => ({ id: t.id, titulo: t.treinamento, data: t.data!, hora: t.hora, cor: corCalendario(t) }));
+  async function baixarTudo() {
+    setErro(null);
+    try {
+      const futuras = (lista.dados ?? []).filter((t) => t.etapa === 'agendadas');
+      const ds = await Promise.all(futuras.map((t) => rpc<TurmaDetalhe>('turma_detalhe', { p_turma: t.id })));
+      const evs = ds.filter((t) => t.inicio && t.fim).map(paraAgenda);
+      if (!evs.length) throw new Error('Nenhum treinamento agendado para exportar.');
+      baixarIcs(evs, 'agenda_treinamentos.ics');
+    } catch (e) { setErro(textoErro(e)); }
+  }
+  return (
+    <Pagina titulo="Calendário" apoio="Os treinamentos da sua agenda. Clique em um deles para ver os detalhes." acoes={<button className="botao botao-secundario" type="button" onClick={() => void baixarTudo()}>Exportar agendados (.ics)</button>}>
+      {lista.erro && <Mensagem tipo="erro">{lista.erro}</Mensagem>}
+      {erro && <Mensagem tipo="erro">{erro}</Mensagem>}
+      {lista.carregando && !lista.dados && <Carregando />}
+      {lista.dados && <Calendario eventos={eventos} aoAbrir={setSel} legenda={[['aguardando', 'Aguardando sua confirmação'], ['confirmado', 'Confirmado'], ['presenca', 'Presença a registrar'], ['feito', 'Concluído']]} />}
+      {sel && <Dialogo aberto titulo="Treinamento" largura="larga" aoFechar={() => { setSel(null); void lista.recarregar(); }}><PainelInstrutor id={sel} aoMudar={() => void lista.recarregar()} /></Dialogo>}
+    </Pagina>
+  );
+}
+
+const paraAgenda = (t: TurmaDetalhe): EventoAgenda => ({ id: t.id, titulo: `Treinamento: ${t.treinamento}`, inicio: t.inicio!, fim: t.fim!, sala: t.sala, detalhes: `Participantes: ${t.participantes.filter((p) => p.situacao !== 'nao_aplicavel').map((p) => p.nome).join(', ')}` });
+
+export function PainelInstrutor({ id, aoMudar }: { id: string; aoMudar: () => void }) {
   const d = useDados(() => rpc<TurmaDetalhe>('turma_detalhe', { p_turma: id }), [id]);
   const [erro, setErro] = useState<string | null>(null);
   const [janela, setJanela] = useState<'propor' | 'recusar' | 'solicitar' | null>(null);
@@ -80,6 +128,13 @@ function PainelInstrutor({ id, aoMudar }: { id: string; aoMudar: () => void }) {
       {aberta && <p className="aviso aviso-info">Sua solicitação de {nomesTipoSolicitacao[aberta.tipo].toLowerCase()} está com Gente e Gestão.</p>}
       {ultima && !aberta && <p className="aviso aviso-info">Última solicitação {ultima.status === 'aprovada' ? 'aprovada' : 'recusada'}{ultima.resposta ? `: ${ultima.resposta}` : ''}.</p>}
 
+      {!!t.hora_inicio && !!t.inicio && !!t.fim && ['agenda_confirmada', 'convite_enviado'].includes(t.status) && t.etapa !== 'presenca' && (
+        <div className="linha-acoes">
+          <a className="botao botao-secundario" href={linkOutlook(paraAgenda(t))} target="_blank" rel="noreferrer">Adicionar ao Outlook</a>
+          <button className="botao botao-discreto" type="button" onClick={() => baixarIcs([paraAgenda(t)], `treinamento_${t.id.slice(0, 8)}.ics`)}>Baixar arquivo .ics</button>
+        </div>
+      )}
+
       {t.status === 'aguardando_instrutor' && !aberta && (
         <div className="detalhe">
           <h3>Você pode aplicar este treinamento?</h3>
@@ -98,7 +153,7 @@ function PainelInstrutor({ id, aoMudar }: { id: string; aoMudar: () => void }) {
         {!pessoas.length && <p className="apoio">Nenhuma pessoa na lista no momento.</p>}
         {pessoas.map((p) => (
           <div className="pessoa" key={p.colaborador_id}>
-            <span>{p.nome}<small>{p.cargo}</small></span>
+            <span>{p.nome}<small>{p.cargo}{p.codigo ? ` · Código ${p.codigo}` : ''}</small></span>
             {presenca ? (
               <span className="alternar">
                 <button type="button" className="presente" aria-pressed={p.situacao === 'presente'} onClick={() => void acao(() => rpc('marcar_presenca', { p_turma: t.id, p_colaborador: p.colaborador_id, p_situacao: 'presente' }))}>Presente</button>

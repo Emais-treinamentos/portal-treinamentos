@@ -17,8 +17,8 @@ const ordem = ['solicitacao', 'replanejar', 'envio', 'presenca', 'formalizar', '
 export function Inicio() {
   const { usuario } = useSessao();
   if (usuario?.perfil === 'gestor') return <Navigate to="/colaboradores" replace />;
-  if (usuario?.perfil === 'colaborador') return <Navigate to="/meus-treinamentos" replace />;
-  if (usuario?.perfil === 'instrutor') return <Navigate to="/minhas-turmas" replace />;
+  if (usuario?.perfil === 'colaborador') return <Navigate to="/meu-calendario" replace />;
+  if (usuario?.perfil === 'instrutor') return <Navigate to="/agenda" replace />;
   return <Painel nome={usuario?.nome ?? ''} />;
 }
 

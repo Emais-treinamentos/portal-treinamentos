@@ -1,11 +1,21 @@
 import { NavLink } from 'react-router-dom';
 import { useSessao, nomesPerfil } from '../lib/sessao';
+import { rpc, useDados } from '../lib/api';
 import { Icone, Rosto, type NomeIcone } from './Pecas';
+
+function AvisoAvaliacoes() {
+  const d = useDados(() => rpc<unknown[]>('minhas_avaliacoes'));
+  const n = d.dados?.length ?? 0;
+  return n ? <span className="contador" aria-label={`${n} avaliação(ões) pendente(s)`}>{n}</span> : null;
+}
 
 export function Topo() {
   const { usuario, sair } = useSessao();
   const p = usuario?.perfil;
   const admin = p === 'admin';
+  // Colaborador ou gestor escalado como instrutor também precisa responder e registrar presença.
+  const escalado = useDados(() => (p === 'colaborador' || p === 'gestor' ? rpc<unknown[]>('minhas_turmas') : Promise.resolve([])), [p]);
+  const instrutor = p === 'instrutor' || (!admin && !!escalado.dados?.length);
   const itens: [string, string, NomeIcone, boolean][] = [
     ['/', 'Dashboard', 'inicio', admin],
     ['/cadastros', 'Cadastros', 'cadastros', admin],
@@ -14,9 +24,13 @@ export function Topo() {
     ['/acompanhar', 'Acompanhar Treinamentos', 'minhas', admin],
     ['/lista-presenca', 'Lista de Presença', 'lista', admin],
     ['/reciclagem', 'Reciclagem', 'movimentacoes', admin],
+    ['/satisfacao', 'Satisfação', 'estrela', admin],
+    ['/agenda', 'Confirmar Agenda', 'minhas', instrutor],
+    ['/calendario', 'Calendário', 'turmas', instrutor],
+    ['/presenca', 'Presença', 'lista', instrutor],
     ['/colaboradores', 'Minha equipe', 'pessoas', p === 'gestor'],
-    ['/minhas-turmas', 'Minhas turmas', 'minhas', !admin],
-    ['/meus-treinamentos', 'Meus treinamentos', 'treinamentos', p === 'gestor' || p === 'colaborador'],
+    ['/meu-calendario', 'Meu Calendário', 'turmas', p === 'gestor' || p === 'colaborador'],
+    ['/meu-perfil', 'Meu Perfil', 'perfil', p === 'gestor' || p === 'colaborador'],
   ];
   const apoio: [string, string, NomeIcone][] = [['/acessos', 'Acessos', 'acessos'], ['/envios', 'Envios', 'envios']];
   return (
@@ -27,7 +41,7 @@ export function Topo() {
       </div>
       <nav className="menu" aria-label="Seções do portal">
         {itens.filter((i) => i[3]).map(([para, rotulo, icone]) => (
-          <NavLink key={rotulo} to={para} end={para === '/'}><Icone nome={icone} />{rotulo}</NavLink>
+          <NavLink key={rotulo} to={para} end={para === '/'}><Icone nome={icone} />{rotulo}{para === '/meu-perfil' && <AvisoAvaliacoes />}</NavLink>
         ))}
         {admin && <hr className="menu-divisao" />}
         {admin && apoio.map(([para, rotulo, icone]) => <NavLink key={rotulo} to={para}><Icone nome={icone} />{rotulo}</NavLink>)}

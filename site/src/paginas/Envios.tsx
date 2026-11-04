@@ -4,7 +4,7 @@ import { dataBR, rpc, useDados } from '../lib/api';
 import { supabase } from '../lib/supabase';
 
 const nomes: Record<string, string> = {
-  aviso_instrutor: 'Aviso ao instrutor', aviso_decisao: 'Aviso de alteração ou decisão', aviso_cancelamento: 'Aviso de cancelamento', lembrete_agenda: 'Lembrete de agenda', lembrete_presenca: 'Lembrete de presença',
+  aviso_instrutor: 'Aviso ao instrutor', avaliacao_treinamento: 'Pedido de avaliação ao colaborador', aviso_decisao: 'Aviso de alteração ou decisão', aviso_cancelamento: 'Aviso de cancelamento', lembrete_agenda: 'Lembrete de agenda', lembrete_presenca: 'Lembrete de presença',
   calendario_criar: 'Criar convite no calendário', calendario_atualizar: 'Atualizar convite no calendário', calendario_cancelar: 'Cancelar convite no calendário',
 };
 

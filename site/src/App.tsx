@@ -10,8 +10,10 @@ import { Inicio } from './paginas/Inicio';
 import { Acompanhar, Formalizar, IrParaTurma } from './paginas/Turmas';
 import { Planejar } from './paginas/Planejar';
 import { ListaPresenca } from './paginas/ListaPresenca';
-import { MinhasTurmas } from './paginas/MinhasTurmas';
-import { Colaboradores, MeusTreinamentos } from './paginas/Colaboradores';
+import { CalendarioInstrutor, ConfirmarAgenda, MinhasTurmas, PresencaInstrutor } from './paginas/MinhasTurmas';
+import { MeuCalendario, MeuPerfil } from './paginas/Colaborador';
+import { Satisfacao } from './paginas/Satisfacao';
+import { Colaboradores } from './paginas/Colaboradores';
 import { Movimentacoes } from './paginas/Movimentacoes';
 import { Cadastros } from './paginas/Cadastros';
 import { Acessos } from './paginas/Acessos';
@@ -34,7 +36,13 @@ export function App() {
       <Route path="/acompanhar" element={<SoPerfil perfil={gestao}><Acompanhar /></SoPerfil>} />
       <Route path="/minhas-turmas" element={<ComLogin><MinhasTurmas /></ComLogin>} />
       <Route path="/colaboradores" element={<SoPerfil perfil={['gestor']}><Colaboradores /></SoPerfil>} />
-      <Route path="/meus-treinamentos" element={<ComLogin><MeusTreinamentos /></ComLogin>} />
+      <Route path="/meus-treinamentos" element={<Navigate to="/meu-perfil" replace />} />
+      <Route path="/meu-calendario" element={<ComLogin><MeuCalendario /></ComLogin>} />
+      <Route path="/meu-perfil" element={<ComLogin><MeuPerfil /></ComLogin>} />
+      <Route path="/agenda" element={<ComLogin><ConfirmarAgenda /></ComLogin>} />
+      <Route path="/calendario" element={<ComLogin><CalendarioInstrutor /></ComLogin>} />
+      <Route path="/presenca" element={<ComLogin><PresencaInstrutor /></ComLogin>} />
+      <Route path="/satisfacao" element={<SoPerfil perfil={['admin']}><Satisfacao /></SoPerfil>} />
       <Route path="/lista-presenca" element={<SoPerfil perfil={gestao}><ListaPresenca /></SoPerfil>} />
       <Route path="/reciclagem" element={<SoPerfil perfil={['admin']}><Movimentacoes /></SoPerfil>} />
       <Route path="/cadastros" element={<SoPerfil perfil={['admin']}><Cadastros /></SoPerfil>} />

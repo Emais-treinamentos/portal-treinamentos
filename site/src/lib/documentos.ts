@@ -49,7 +49,7 @@ export async function gerarF109(s: SituacaoColaborador) {
   celula('Setor / Área', m, y, 42, 8, { fill: cinza, bold: true }); celula(c.departamento ?? '', m + 42, y, W - 42, 8); y += 14;
   const ws = [10, 72, 20, 25, 25, 38]; const xs = ws.map((_, i) => m + ws.slice(0, i).reduce((a, b) => a + b, 0));
   const titulo = () => {
-    ['#', 'Treinamento', 'C.H.', 'Data', 'Status', 'Cód. Registro da Turma'].forEach((t, i) => celula(t, xs.at(i)!, y, ws.at(i)!, 9, { fill: verde, bold: true, size: 8, align: i === 1 ? 'left' : 'center', color: [255, 255, 255] }));
+    ['#', 'Treinamento', 'C.H.', 'Data', 'Status', 'Cód. Assinatura Instrutor'].forEach((t, i) => celula(t, xs.at(i)!, y, ws.at(i)!, 9, { fill: verde, bold: true, size: 8, align: i === 1 ? 'left' : 'center', color: [255, 255, 255] }));
     y += 9;
   };
   titulo();
@@ -58,7 +58,7 @@ export async function gerarF109(s: SituacaoColaborador) {
   feitos.forEach((d, i) => {
     const h = Math.max(8, 4 + linhas(d.treinamento, ws[1]).length * 3.8);
     if (y + h > H) { pdf.addPage(); y = m; titulo(); }
-    [String(i + 1), d.treinamento, cargaTexto(d.carga_minutos), dataBR(d.data), 'Realizado', d.turma_id.slice(0, 8).toUpperCase()].forEach((v, j) =>
+    [String(i + 1), d.treinamento, cargaTexto(d.carga_minutos), dataBR(d.data), 'Realizado', d.codigo ?? ''] .forEach((v, j) =>
       celula(v, xs.at(j)!, y, ws.at(j)!, h, { size: j === 5 ? 7 : 8, align: j === 1 ? 'left' : 'center', bold: j === 4, color: j === 4 ? verde : [0, 0, 0] }));
     y += h;
   });

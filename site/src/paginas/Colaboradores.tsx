@@ -111,17 +111,6 @@ function AcaoColaborador({ id, tipo, aoFechar }: { id: string; tipo: 'editar' | 
   );
 }
 
-export function MeusTreinamentos() {
-  const { usuario } = useSessao();
-  const meu = useDados(async () => (await supabase.from('usuarios').select('colaborador_id').eq('id', usuario!.id).single()).data?.colaborador_id as string | null);
-  return (
-    <Pagina titulo="Meus treinamentos" apoio="Sua situação, suas turmas e seus documentos.">
-      {meu.carregando && <Carregando />}
-      {meu.dados ? <Prontuario id={meu.dados} admin={false} /> : !meu.carregando && <p className="vazio">Seu acesso ainda não está ligado a um colaborador. Fale com Gente e Gestão.</p>}
-    </Pagina>
-  );
-}
-
 function Prontuario({ id, admin }: { id: string; admin: boolean }) {
   const d = useDados(() => rpc<SituacaoColaborador>('situacao_colaborador', { p_colaborador: id }), [id]);
   const [erro, setErro] = useState<string | null>(null);

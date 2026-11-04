@@ -2379,3 +2379,63 @@ h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
 .celula-apoio { display: block; font-size: 0.82rem; color: var(--suave); overflow-wrap: anywhere; }
 .celula-sem-quebra { white-space: nowrap !important; }
 .painel-grade .tabela th, .painel-grade .tabela td { padding-left: 12px; padding-right: 12px; }
+
+/* Calendário */
+.cal { padding: 20px 22px; background: var(--superficie); border: 1px solid var(--linha); border-radius: 18px; }
+.cal-topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+.cal-topo h2 { font-size: 1.25rem; font-weight: 600; }
+.cal-grade { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--linha); border-left: 1px solid var(--linha); }
+.cal-semana { padding: 6px 8px; font-size: 0.82rem; font-weight: 600; color: var(--suave); background: var(--fundo); border-right: 1px solid var(--linha); border-bottom: 1px solid var(--linha); }
+.cal-dia { display: flex; flex-direction: column; gap: 4px; min-height: 96px; padding: 6px; border-right: 1px solid var(--linha); border-bottom: 1px solid var(--linha); min-width: 0; }
+.cal-fora { background: var(--fundo); }
+.cal-numero { font-size: 0.82rem; color: var(--suave); }
+.cal-hoje .cal-numero { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--petroleo); color: #fff; font-weight: 600; }
+.cal-evento { display: block; width: 100%; padding: 4px 6px; border: 0; border-radius: 6px; font: inherit; font-size: 0.8rem; text-align: left; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cal-evento b { font-weight: 600; }
+.cal-evento:hover { filter: brightness(0.95); }
+.cal-confirmado { background: #d9efe3; color: #00514f; }
+.cal-aguardando { background: #fdf1d8; color: #6b4a00; }
+.cal-presenca { background: #fbe3cf; color: #8a4208; }
+.cal-feito { background: #e6ebe9; color: #3b4f49; }
+.cal-legenda { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; font-size: 0.875rem; color: var(--suave); }
+.cal-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.cal-legenda i, .cal-ponto { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.cal-lista { display: none; }
+.aviso-avaliar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; padding: 14px 18px; margin-bottom: 16px; background: var(--menta); color: #0b4a44; border-radius: 14px; }
+.aviso-avaliar small { display: block; color: #2f4f48; }
+.menu .contador { margin-left: auto; }
+/* Avaliação */
+.aval-grupo { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; }
+.aval-grupo legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
+.aval-notas { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.aval-tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.aval-lista { display: flex; flex-direction: column; gap: 6px; }
+.aval-opcao { min-height: 44px; padding: 0 12px; border: 1px solid #a9bab5; border-radius: 12px; background: var(--superficie); color: var(--tinta); font: inherit; cursor: pointer; }
+.aval-opcao[aria-pressed='true'] { background: var(--petroleo); border-color: var(--petroleo); color: #fff; font-weight: 600; }
+.aval-escala { display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--suave); }
+/* Satisfação */
+.cartoes-3 { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.sat-indicador { font-size: 1.15rem; color: var(--petroleo); }
+.item-lista:disabled { cursor: default; opacity: 0.75; }
+.sat-numeros { display: flex; flex-wrap: wrap; gap: 12px 32px; }
+.sat-numeros strong { display: block; font-size: 2.1rem; font-weight: 700; line-height: 1.1; color: var(--petroleo); }
+.sat-numeros small { color: var(--suave); }
+.painel h3 small { font-weight: 400; color: var(--suave); }
+.sat-1 { background: var(--petroleo); } .sat-2 { background: #e9a15b; } .sat-3 { background: #a8480b; }
+.sat-legenda { margin-top: 8px; }
+.sat-topico { margin-top: 10px; }
+.sat-topico > div:first-child { display: flex; justify-content: space-between; gap: 12px; font-size: 0.94rem; margin-bottom: 4px; }
+.sat-trilho { height: 8px; border-radius: 4px; background: #e6efec; overflow: hidden; }
+.sat-trilho i { display: block; height: 100%; background: var(--petroleo); }
+.sat-comentario { margin: 8px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--fundo); font-size: 0.94rem; }
+@media (max-width: 860px) {
+  .cal { padding: 14px; }
+  .cal-dia { min-height: 44px; padding: 3px; }
+  .cal-evento { height: 8px; padding: 0; color: transparent; }
+  .cal-lista { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+}
+.cal-evento { white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; line-height: 1.25; }
+@media (max-width: 860px) {
+  .lateral { flex-basis: auto; }
+  .cal-evento { display: block; -webkit-line-clamp: unset; }
+}

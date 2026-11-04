@@ -138,6 +138,11 @@ select teste.ok('sugestão da promoção', (sugerir_reciclagem((select id from c
 select confirmar_reciclagem((select id from colaboradores where nome='Paula Teste'),'promocao_vertical','dispensa');
 select teste.ok('dispensa zera pendências', (select pendentes from painel_colaboradores() where nome='Paula Teste') = 0 and (select not classificar from painel_colaboradores() where nome='Paula Teste'));
 select teste.ok('painel e fila respondem', (select count(*) from fila_inicio()) >= 0 and (indicadores()->>'colaboradores')::int > 0);
+
+-- Código único e avaliação confidencial
+select teste.ok('presença gera código único por pessoa', (select count(distinct codigo_presenca) = count(*) and count(*) > 0 from turma_participantes where situacao='presente'));
+select teste.ok('ausente fica sem código', not exists (select 1 from turma_participantes where situacao <> 'presente' and codigo_presenca is not null));
+select teste.ok('resposta não tem coluna de pessoa nem data', not exists (select 1 from information_schema.columns where table_name='avaliacao_respostas' and (column_name like '%colaborador%' or data_type like 'timestamp%' or column_name like '%usuario%')));
 reset role;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);

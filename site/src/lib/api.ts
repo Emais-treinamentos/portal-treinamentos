@@ -75,7 +75,7 @@ export const nomesMovimentacao: Record<string, string> = {
 };
 export const nomesAcao: Record<string, string> = { total: 'Total', parcial: 'Parcial', dispensa: 'Dispensa' };
 
-export type Pessoa = { colaborador_id: string; nome: string; cargo: string | null; situacao: string; origem: string };
+export type Pessoa = { colaborador_id: string; nome: string; cargo: string | null; situacao: string; codigo?: string | null; origem: string };
 export type Solicitacao = { id: string; tipo: string; motivo: string; proposta: { data?: string; hora?: string; sala?: string; instrutor_email?: string }; status: string; resposta: string | null; solicitado_em: string };
 export type TurmaDetalhe = {
   id: string; treinamento: string; carga_minutos: number; etapa: Etapa; status: string; tipo: string; data: string | null; hora_opcao_1: string | null; hora_opcao_2: string | null; hora_inicio: string | null;
@@ -87,7 +87,7 @@ export type ItemSituacao = { treinamento_id: string; treinamento: string; situac
 export type SituacaoColaborador = {
   colaborador: { id: string; nome: string; email: string | null; cargo_id: string; cargo: string; departamento: string; data_admissao: string | null; data_referencia: string | null; ativo: boolean };
   itens: ItemSituacao[];
-  historico: { turma_id: string; treinamento: string; carga_minutos: number; data: string | null; situacao: string; origem: string; instrutor_email: string | null; cargo: string | null }[];
+  historico: { turma_id: string; codigo?: string | null; treinamento: string; carga_minutos: number; data: string | null; situacao: string; origem: string; instrutor_email: string | null; cargo: string | null }[];
   movimentacoes: { cargo: string; data_inicio: string; data_fim: string | null; tipo: string }[];
   decisao: { acao_final: string; tipo_movimentacao: string; decidido_em: string; cargo_anterior_id: string | null } | null;
 };
