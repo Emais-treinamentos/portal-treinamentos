@@ -93,7 +93,20 @@ export function CalendarioInstrutor() {
   );
 }
 
-const paraAgenda = (t: TurmaDetalhe): EventoAgenda => ({ id: t.id, titulo: `Treinamento: ${t.treinamento}`, inicio: t.inicio!, fim: t.fim!, sala: t.sala, detalhes: `Participantes: ${t.participantes.filter((p) => p.situacao !== 'nao_aplicavel').map((p) => p.nome).join(', ')}` });
+const textoConvite = (t: TurmaDetalhe) => [
+  'Olá,',
+  'Segue o convite do treinamento de integração a partir da sua confirmação de data e horário:',
+  `Treinamento: ${t.treinamento}`,
+  `Data: ${dataBR(t.data)}`,
+  `Horário: ${hora(t.hora_inicio)}`,
+  `Sala: ${t.sala ?? 'A definir'}`,
+  'Participantes:',
+  ...t.participantes.filter((p) => p.situacao !== 'nao_aplicavel').map((p) => [p.cargo, p.nome].filter(Boolean).join(' - ')),
+  'Atenciosamente,',
+  'Gente e Gestão',
+].join('\n');
+
+const paraAgenda = (t: TurmaDetalhe): EventoAgenda => ({ id: t.id, titulo: `Treinamento: ${t.treinamento}`, inicio: t.inicio!, fim: t.fim!, sala: t.sala, detalhes: textoConvite(t) });
 
 // Com consulta, só mostra: confirmar fica em Confirmar Agenda, e marcar presença, em Presença.
 export function PainelInstrutor({ id, aoMudar, consulta = false }: { id: string; aoMudar: () => void; consulta?: boolean }) {
