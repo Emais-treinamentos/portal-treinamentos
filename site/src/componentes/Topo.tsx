@@ -23,15 +23,15 @@ export function Topo() {
       </div>
       <nav className="menu" aria-label="Seções do portal">
         {p === 'admin' && <NavLink to="/" end>Início</NavLink>}
-        {(p === 'admin' || p === 'seguranca') && <NavLink to="/turmas">Turmas</NavLink>}
+        {p === 'admin' && <NavLink to="/turmas">Turmas</NavLink>}
         <NavLink to="/minhas-turmas">Minhas turmas</NavLink>
-        {(p === 'admin' || p === 'seguranca') && <NavLink to="/colaboradores">Colaboradores</NavLink>}
+        {p === 'admin' && <NavLink to="/colaboradores">Colaboradores</NavLink>}
         {p === 'gestor' && <NavLink to="/colaboradores">Minha equipe</NavLink>}
-        {p !== 'admin' && p !== 'seguranca' && p !== 'instrutor' && <NavLink to="/meus-treinamentos">Meus treinamentos</NavLink>}
+        {p !== 'admin' && p !== 'instrutor' && <NavLink to="/meus-treinamentos">Meus treinamentos</NavLink>}
         {p === 'admin' && <NavLink to="/movimentacoes">Movimentações</NavLink>}
         {p === 'admin' && <NavLink to="/matriz">Matriz</NavLink>}
         {p === 'admin' && <NavLink to="/cadastros">Cadastros</NavLink>}
-        {(p === 'admin' || p === 'seguranca') && <NavLink to="/indicadores">Indicadores</NavLink>}
+        {p === 'admin' && <NavLink to="/indicadores">Indicadores</NavLink>}
         {p === 'admin' && <NavLink to="/acessos">Acessos</NavLink>}
         {p === 'admin' && <NavLink to="/envios">Envios</NavLink>}
       </nav>

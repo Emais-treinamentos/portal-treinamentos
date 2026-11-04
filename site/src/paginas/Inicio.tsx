@@ -13,7 +13,6 @@ const grupos: [string, string, string][] = [
 
 export function Inicio() {
   const { usuario } = useSessao();
-  if (usuario?.perfil === 'seguranca') return <Navigate to="/turmas" replace />;
   if (usuario?.perfil === 'gestor') return <Navigate to="/colaboradores" replace />;
   if (usuario?.perfil === 'colaborador') return <Navigate to="/meus-treinamentos" replace />;
   if (usuario?.perfil === 'instrutor') return <Navigate to="/minhas-turmas" replace />;

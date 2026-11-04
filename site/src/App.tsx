@@ -21,7 +21,7 @@ export function App() {
   const { recuperandoSenha } = useSessao();
   const navegar = useNavigate();
   useEffect(() => { if (recuperandoSenha) navegar('/nova-senha', { replace: true }); }, [recuperandoSenha, navegar]);
-  const gestao: Perfil[] = ['admin', 'seguranca'];
+  const gestao: Perfil[] = ['admin'];
   return (
     <Routes>
       <Route path="/entrar" element={<SoForaDoLogin><Entrar /></SoForaDoLogin>} />

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
-export type Perfil = 'admin' | 'seguranca' | 'gestor' | 'colaborador' | 'instrutor';
+export type Perfil = 'admin' | 'gestor' | 'colaborador' | 'instrutor';
 
 export type Usuario = {
   id: string;
@@ -29,7 +29,6 @@ const Contexto = createContext<ValorSessao | null>(null);
 
 export const nomesPerfil: Record<Perfil, string> = {
   admin: 'Gente e Gestão',
-  seguranca: 'Segurança do Trabalho',
   gestor: 'Gestor',
   colaborador: 'Colaborador',
   instrutor: 'Instrutor',

@@ -22,7 +22,7 @@ grant usage on schema teste to anon, authenticated;
 do $$
 declare u record; i uuid;
 begin
-  for u in select * from (values ('gestao.teste@example.com','admin','Gabriela Teste'),('seguranca.teste@example.com','seguranca','Sara Teste'),
+  for u in select * from (values ('gestao.teste@example.com','admin','Gabriela Teste'),('seguranca.teste@example.com','instrutor','Sara Teste'),
     ('instrutor.teste@example.com','colaborador','Igor Teste Instrutor'),('gestor.teste@example.com','gestor','Gustavo Teste Gestor'),('colaborador.teste@example.com','colaborador','Clara Teste'),('outro.instrutor@example.com','instrutor',null)) x(email,perfil,nome) loop
     i := gen_random_uuid();
     insert into auth.users values (i, u.email);
@@ -47,8 +47,8 @@ select teste.como('gestor.teste@example.com');
 select teste.ok('gestor vê só a área e si', (select count(*) from colaboradores) = (select count(*) from painel_colaboradores()) and (select count(distinct departamento) from painel_colaboradores()) = 1);
 select teste.falha('gestor não lê fila', 'select fila_inicio()');
 select teste.como('seguranca.teste@example.com');
-select teste.ok('segurança lê todos', (select count(*) from colaboradores) = 14);
-select teste.falha('segurança não formaliza', $q$select formalizar_turma(gen_random_uuid())$q$);
+select teste.ok('técnico de segurança entra como instrutor e só se vê', (select count(*) from colaboradores) = 1);
+select teste.falha('instrutor não formaliza', $q$select formalizar_turma(gen_random_uuid())$q$);
 
 -- Ciclo. Cargo sem elegível não vira linha.
 select teste.como('gestao.teste@example.com');

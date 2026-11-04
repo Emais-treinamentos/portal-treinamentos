@@ -31,7 +31,6 @@ O repositório não guarda dados pessoais, senhas nem chaves secretas. A chave e
 | Perfil | Vê e faz |
 |---|---|
 | Gente e Gestão | Tudo |
-| Segurança do Trabalho | Lê turmas, colaboradores e indicadores |
 | Gestor | Só os departamentos marcados no acesso, em leitura |
 | Colaborador | Os próprios treinamentos e documentos |
 | Instrutor | Minhas turmas. Qualquer perfil vê as turmas em que o e-mail dele é o do instrutor |

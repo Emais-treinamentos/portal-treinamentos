@@ -7,7 +7,7 @@ const cabecalhos = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const DESTINOS = ['https://emais-treinamentos.github.io/portal-treinamentos/', 'http://localhost:5173/portal-treinamentos/', 'http://localhost:4173/portal-treinamentos/'];
-const PERFIS = ['admin', 'seguranca', 'gestor', 'colaborador', 'instrutor'];
+const PERFIS = ['admin', 'gestor', 'colaborador', 'instrutor'];
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const responder = (status: number, corpo: unknown) => new Response(JSON.stringify(corpo), { status, headers: { ...cabecalhos, 'Content-Type': 'application/json' } });
 const erro = (status: number, mensagem: string) => responder(status, { erro: mensagem });
