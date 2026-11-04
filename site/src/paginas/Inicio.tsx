@@ -6,7 +6,7 @@ import { rpc, useDados } from '../lib/api';
 import { useSessao } from '../lib/sessao';
 
 type ItemFila = { grupo: string; urgente: boolean; titulo: string; detalhe: string | null; turma_id: string | null; colaborador_id: string | null; solicitacao_id: string | null };
-type Planejar = { treinamento_id: string; treinamento: string; pessoas: { colaborador_id: string; nome: string }[] };
+type Planejar = { treinamento_id: string; treinamento: string; pessoas: { colaborador_id: string; nome: string }[]; cargos: { cargo_id: string }[] };
 type Ind = { verde: number; amarelo: number; vermelho: number; obrigatorios: number; realizados: number };
 
 const acoes: Record<string, string> = { solicitacao: 'Decidir', replanejar: 'Replanejar', envio: 'Ver', presenca: 'Ver turma', formalizar: 'Formalizar', movimentacao: 'Classificar', sem_resposta: 'Ver turma' };
@@ -72,7 +72,7 @@ function Painel({ nome }: { nome: string }) {
                     <small>{p.pessoas.length === 1 ? '1 pessoa' : `${p.pessoas.length} pessoas`}</small>
                   </span>
                   <span className="rostos">{p.pessoas.slice(0, 3).map((x) => <Rosto nome={x.nome} key={x.colaborador_id} />)}</span>
-                  <Link to="/turmas?etapa=a_planejar">Planejar</Link>
+                  <Link to={`/planejar?cargos=${p.cargos.map((c) => c.cargo_id).join(',')}`}>Planejar</Link>
                 </div>
               ))}
             </div>

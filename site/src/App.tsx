@@ -8,6 +8,7 @@ import { NovaSenha } from './paginas/NovaSenha';
 import { AcessoBloqueado } from './paginas/AcessoBloqueado';
 import { Inicio } from './paginas/Inicio';
 import { Turmas } from './paginas/Turmas';
+import { Planejar } from './paginas/Planejar';
 import { MinhasTurmas } from './paginas/MinhasTurmas';
 import { Colaboradores, MeusTreinamentos } from './paginas/Colaboradores';
 import { Movimentacoes } from './paginas/Movimentacoes';
@@ -28,6 +29,7 @@ export function App() {
       <Route path="/esqueci-senha" element={<SoForaDoLogin><EsqueciSenha /></SoForaDoLogin>} />
       <Route path="/nova-senha" element={<NovaSenha />} />
       <Route path="/" element={<ComLogin><Inicio /></ComLogin>} />
+      <Route path="/planejar" element={<SoPerfil perfil={['admin']}><Planejar /></SoPerfil>} />
       <Route path="/turmas" element={<SoPerfil perfil={gestao}><Turmas /></SoPerfil>} />
       <Route path="/minhas-turmas" element={<ComLogin><MinhasTurmas /></ComLogin>} />
       <Route path="/colaboradores" element={<SoPerfil perfil={[...gestao, 'gestor']}><Colaboradores /></SoPerfil>} />

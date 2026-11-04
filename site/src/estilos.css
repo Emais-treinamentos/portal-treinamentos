@@ -2300,3 +2300,20 @@ h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
 /* Campos com contorno visível, mesmo com as linhas mais suaves do restante */
 .campo input, .campo select, .campo textarea, .campo-busca input, .alternar button { border-color: #a9bab5; }
 .painel .campo-grupo { display: flex; flex-direction: column; gap: 6px; }
+
+/* Planejar treinamentos */
+.plano-etapa { display: flex; flex-direction: column; gap: 12px; padding: 20px 22px; margin-bottom: 16px; background: var(--superficie); border: 1px solid var(--linha); border-radius: 18px; }
+.plano-etapa h2 { font-size: 1.125rem; font-weight: 600; }
+.plano-etapa h2 small, .plano-recolhido summary small { margin-left: 6px; font-weight: 500; font-size: 0.875rem; color: var(--suave); }
+.plano-etapa > .apoio { margin: -6px 0 0; }
+.plano-opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px 20px; }
+.plano-cartao { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--linha); border-radius: 14px; }
+.plano-cartao-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.plano-cartao-topo .opcao { flex: 1 1 240px; }
+.plano-cartao-topo .opcao strong { font-weight: 600; }
+.plano-cartao-topo small, .plano-cartao-apoio { color: var(--suave); font-size: 0.875rem; }
+.plano-cartao-apoio { margin: 0; overflow-wrap: anywhere; }
+.plano-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 4px; }
+.plano-recolhido summary { font-weight: 600; font-size: 1.125rem; cursor: pointer; min-height: 28px; }
+.plano-recolhido[open] summary { margin-bottom: 8px; }
+.plano-envio { display: flex; justify-content: flex-end; margin-bottom: 24px; }

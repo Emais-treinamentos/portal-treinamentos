@@ -10,6 +10,7 @@ export function Topo() {
     ['/', 'Início', 'inicio', admin],
     ['/colaboradores', 'Colaboradores', 'pessoas', admin],
     ['/colaboradores', 'Minha equipe', 'pessoas', p === 'gestor'],
+    ['/planejar', 'Planejar', 'planejar', admin],
     ['/turmas', 'Turmas', 'turmas', admin],
     ['/minhas-turmas', 'Minhas turmas', 'minhas', true],
     ['/meus-treinamentos', 'Meus treinamentos', 'treinamentos', p !== 'admin' && p !== 'instrutor'],

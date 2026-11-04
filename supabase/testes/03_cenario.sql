@@ -54,8 +54,14 @@ select teste.falha('instrutor não formaliza', $q$select formalizar_turma(gen_ra
 select teste.como('gestao.teste@example.com');
 select teste.ok('a planejar tem pendências', (select count(*) from a_planejar()) > 0);
 insert into ctx values ('c_jr',(select id from cargos where nome like '%JUNIOR')),('c_en',(select id from cargos where nome='ENGENHEIRO DE OBRAS')),('c_se',(select id from cargos where nome='TÉCNICO DE SEGURANÇA'));
+select teste.ok('planejar consolida o treinamento nos cargos escolhidos', (select jsonb_array_length(cargos) from planejar_treinamentos(array[(select v from ctx where k='c_jr'),(select v from ctx where k='c_en')]) where treinamento='Código de Ética') = 2);
+select teste.ok('planejar sem cargo não traz treinamento normal', not exists (select 1 from planejar_treinamentos('{}') where tipo <> 'reciclagem'));
+select teste.falha('envio sem data é recusado', $q$select enviar_planejamento('[{"treinamento_id":"00000000-0000-0000-0000-000000000000","cargos":[],"data":"","hora_1":"09:00","email":"a@b.c"}]')$q$);
+select teste.falha('envio é tudo ou nada', format($q$select enviar_planejamento('[{"treinamento_id":"%s","cargos":["%s"],"data":"2031-01-10","hora_1":"09:00","email":"a@b.c"},{"treinamento_id":"%s","cargos":["%s"],"data":"","hora_1":"09:00","email":"a@b.c"}]')$q$, (select id from treinamentos where nome='LGPD no dia a dia'), (select v from ctx where k='c_jr'), (select id from treinamentos where nome='LGPD no dia a dia'), (select v from ctx where k='c_jr')));
+select teste.ok('tudo ou nada não deixa turma', not exists (select 1 from turmas where data='2031-01-10'));
 insert into ctx select 't1', criar_turma((select id from treinamentos where nome='Código de Ética'),'admissao',current_date+5,'09:00','14:00','INSTRUTOR.TESTE@example.com',
   array[(select v from ctx where k='c_jr'),(select v from ctx where k='c_en'),(select id from cargos where nome='CONSULTOR DE VENDAS'),(select id from cargos where nome='ANALISTA GENTE E GESTÃO')]);
+select teste.ok('mesmo treinamento aberto consolida, sem turma nova', criar_turma((select id from treinamentos where nome='Código de Ética'),'admissao',current_date+5,'09:00','14:00','instrutor.teste@example.com',array[(select v from ctx where k='c_jr')]) = (select v from ctx where k='t1'));
 select teste.ok('só elegíveis na janela (Bruna, 90 dias, e Gabriela ficam fora)', (select jsonb_agg(p->>'nome' order by p->>'nome') from jsonb_array_elements(turma_detalhe((select v from ctx where k='t1'))->'participantes') p) = '["Caio Teste", "Clara Teste", "Eduardo Teste", "Vera Teste"]');
 select teste.ok('cargo sem elegível aparece com zero, sem linha de participante', (select (c->>'elegiveis')::int from jsonb_array_elements(turma_detalhe((select v from ctx where k='t1'))->'cargos') c where c->>'nome'='ANALISTA GENTE E GESTÃO') = 0);
 select teste.ok('aviso único na fila', (select count(*) from notificacoes where turma_id=(select v from ctx where k='t1')) = 1);
@@ -71,6 +77,9 @@ select teste.como('gestao.teste@example.com');
 select teste.falha('não formaliza sem sala', $q$select formalizar_turma((select v from ctx where k='t1'))$q$);
 select definir_sala((select v from ctx where k='t1'),'Time Forte');
 select formalizar_turma((select v from ctx where k='t1'));
+insert into ctx select 'dup', criar_turma((select id from treinamentos where nome='Código de Ética'),'admissao',current_date+40,'09:00',null,'instrutor.teste@example.com',array[(select v from ctx where k='c_jr')]);
+select teste.ok('quem já está em turma aberta do treinamento não é convocado de novo', not exists (select 1 from turma_participantes where turma_id=(select v from ctx where k='dup') and situacao='convocado' and colaborador_id in (select colaborador_id from turma_participantes where turma_id=(select v from ctx where k='t1'))));
+select cancelar_turma((select v from ctx where k='dup'),'Teste');
 select teste.ok('convite vira notificação de calendário', exists (select 1 from notificacoes where tipo='calendario_criar' and turma_id=(select v from ctx where k='t1')));
 select teste.falha('presença só abre no horário', $q$select marcar_presenca((select v from ctx where k='t1'),(select id from colaboradores where nome='Clara Teste'),'presente')$q$);
 

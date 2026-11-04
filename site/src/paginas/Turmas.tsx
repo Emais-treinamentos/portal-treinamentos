@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Pagina, Mensagem } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Campo, Farol, FormDialogo, SeloSituacao } from '../componentes/Pecas';
@@ -28,7 +28,6 @@ export function Turmas() {
   const [etapa, setEtapa] = useState<Etapa>((params.get('etapa') as Etapa) ?? 'formalizar');
   const [busca, setBusca] = useState('');
   const [sel, setSel] = useState<string | null>(params.get('turma'));
-  const [planejar, setPlanejar] = useState<Planejar | 'nova' | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const turmas = useDados(() => rpc<TurmaLinha[]>('listar_turmas'));
   const fila = useDados(() => (admin ? rpc<Planejar[]>('a_planejar') : Promise.resolve([] as Planejar[])), [admin]);
@@ -45,7 +44,7 @@ export function Turmas() {
   const lista = (turmas.dados ?? []).filter((t) => t.etapa === etapa && (!q || `${t.treinamento} ${t.instrutor_email} ${t.sala ?? ''}`.toLowerCase().includes(q)));
 
   return (
-    <Pagina titulo="Turmas" apoio="Todo o ciclo da turma, do planejamento à presença, em uma tela." acoes={admin ? <button className="botao" type="button" onClick={() => setPlanejar('nova')}>Nova turma</button> : undefined}>
+    <Pagina titulo="Turmas" apoio="Todo o ciclo da turma, do planejamento à presença, em uma tela." acoes={admin ? <Link className="botao" to="/planejar">Planejar treinamentos</Link> : undefined}>
       {msg && <Mensagem tipo="ok" aoFechar={() => setMsg(null)}>{msg}</Mensagem>}
       {turmas.erro && <Mensagem tipo="erro">{turmas.erro}</Mensagem>}
       <div className="chips chips-filtro" role="group" aria-label="Etapas">
@@ -62,7 +61,7 @@ export function Turmas() {
                 <small>{p.pessoas.map((x) => x.nome).join(', ')}</small>
                 <small>{p.cargos.map((c) => c.nome).join(', ')}</small>
               </span>
-              {admin && <button className="botao botao-pequeno" type="button" onClick={() => setPlanejar(p)}>Criar turma</button>}
+              {admin && <Link className="botao botao-pequeno" to={`/planejar?cargos=${p.cargos.map((c) => c.cargo_id).join(',')}`}>Planejar</Link>}
             </div>
           ))}
         </div>
@@ -84,37 +83,7 @@ export function Turmas() {
           {sel ? <PainelTurma id={sel} admin={admin} aoMudar={recarregar} /> : <p className="vazio">Escolha uma turma para ver os detalhes.</p>}
         </div>
       )}
-      {planejar && <CriarTurma base={planejar === 'nova' ? null : planejar} aoFechar={() => setPlanejar(null)} aoCriar={(id) => { setMsg('Turma criada. O aviso ao instrutor entrou na fila de envio.'); setSel(id); setEtapa('aguardando_instrutor'); recarregar(); }} />}
     </Pagina>
-  );
-}
-
-function CriarTurma({ base, aoFechar, aoCriar }: { base: Planejar | null; aoFechar: () => void; aoCriar: (id: string) => void }) {
-  const treinamentos = useDados(async () => (await supabase.from('treinamentos').select('id, nome').eq('ativo', true).order('nome')).data ?? []);
-  const cargos = useDados(async () => (await supabase.from('cargos').select('id, nome').eq('ativo', true).order('nome')).data ?? []);
-  const [treinamento, setTreinamento] = useState(base?.treinamento_id ?? '');
-  const [data, setData] = useState('');
-  const [h1, setH1] = useState('');
-  const [h2, setH2] = useState('');
-  const [email, setEmail] = useState('');
-  const [selCargos, setSelCargos] = useState<string[]>(base?.cargos.map((c) => c.cargo_id) ?? []);
-  return (
-    <FormDialogo titulo="Nova turma" rotulo="Criar e avisar o instrutor" largura="larga" aoFechar={aoFechar}
-      aoEnviar={async () => aoCriar(await rpc<string>('criar_turma', { p_treinamento: treinamento, p_tipo: base?.tipo ?? 'normal', p_data: data || null, p_hora_1: h1 || null, p_hora_2: h2 || null, p_instrutor_email: email, p_cargos: selCargos }))}>
-      <Campo rotulo="Treinamento"><select required value={treinamento} onChange={(e) => setTreinamento(e.target.value)}><option value="">Escolha</option>{(treinamentos.dados ?? []).map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}</select></Campo>
-      <div className="grade-2">
-        <Campo rotulo="Data sugerida"><input type="date" required value={data} onChange={(e) => setData(e.target.value)} /></Campo>
-        <Campo rotulo="E-mail do instrutor"><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Campo>
-        <Campo rotulo="Horário 1"><input type="time" required value={h1} onChange={(e) => setH1(e.target.value)} /></Campo>
-        <Campo rotulo="Horário 2 (opcional)"><input type="time" value={h2} onChange={(e) => setH2(e.target.value)} /></Campo>
-      </div>
-      <fieldset className="campo-grupo"><legend>Cargos</legend>
-        <div className="quadro-matriz">{(cargos.dados ?? []).map((c) => (
-          <label className="opcao" key={c.id}><input type="checkbox" checked={selCargos.includes(c.id)} onChange={(e) => setSelCargos(e.target.checked ? [...selCargos, c.id] : selCargos.filter((x) => x !== c.id))} />{c.nome}</label>
-        ))}</div>
-      </fieldset>
-      {base && <div><h3>Quem será convocado</h3>{base.pessoas.map((p) => <div className="pessoa" key={p.colaborador_id}><span>{p.nome}<small>{p.cargo} · {p.motivo}</small></span></div>)}</div>}
-    </FormDialogo>
   );
 }
 
