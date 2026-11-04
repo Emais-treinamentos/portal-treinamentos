@@ -2317,3 +2317,35 @@ h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
 .plano-recolhido summary { font-weight: 600; font-size: 1.125rem; cursor: pointer; min-height: 28px; }
 .plano-recolhido[open] summary { margin-bottom: 8px; }
 .plano-envio { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+
+/* Lista de presença por colaborador */
+.lista-busca { max-width: 420px; margin-bottom: 14px; }
+.doc-acoes { margin-bottom: 16px; }
+.doc-pendencias { padding: 18px 22px; margin-bottom: 16px; background: var(--superficie); border: 1px solid var(--linha); border-radius: 18px; }
+.doc-pendencias h2 { font-size: 1.125rem; font-weight: 600; margin-bottom: 6px; }
+.doc-f109 { min-width: 680px; max-width: 860px; margin: 0 auto; padding: 28px; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 1.4; }
+.doc-cabecalho { display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center; gap: 12px; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 2px solid #333; }
+.doc-cabecalho img { height: 44px; width: auto; }
+.doc-cabecalho > div { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.doc-cabecalho dl { display: grid; grid-template-columns: auto 1fr; margin: 0; font-size: 12px; border-top: 1px solid #999; border-left: 1px solid #999; }
+.doc-cabecalho dt, .doc-cabecalho dd { margin: 0; padding: 2px 6px; border-right: 1px solid #999; border-bottom: 1px solid #999; }
+.doc-cabecalho dt { font-weight: 700; }
+.doc-f109 table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+.doc-f109 th, .doc-f109 td { border: 1px solid #999; padding: 5px 8px; text-align: left; }
+.doc-dados th { width: 20%; background: #f0f0f0; }
+.doc-treinamentos th { background: #2d6a4f; color: #fff; font-size: 12px; }
+.doc-treinamentos td { font-size: 12px; }
+.doc-treinamentos td strong { color: #2d6a4f; }
+.doc-total { margin: 0 0 16px; text-align: right; font-weight: 700; }
+.doc-assinatura { padding: 14px; border: 1px solid #999; }
+.doc-assinatura > div { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 16px; margin-top: 14px; }
+.doc-assinatura span { font-size: 11px; color: #555; }
+.doc-assinatura b { display: block; min-height: 22px; padding-top: 4px; border-bottom: 1px solid #333; font-size: 12px; font-weight: 400; color: #000; }
+.doc-eficacia { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+.doc-eficacia > strong { padding: 6px; text-align: center; background: #f0f0f0; }
+.doc-eficacia small { color: #666; font-style: italic; }
+.doc-eficacia table { margin: 4px 0 0; }
+.doc-eficacia th { width: 25%; background: #f0f0f0; }
+.doc-obs { height: 56px; }
+.carregando-barra, .carregando-barra::before, .carregando-barra::after { background: var(--menta) !important; background-image: none !important; }
+.carregando-barra { border-radius: 4px; overflow: hidden; position: relative; }

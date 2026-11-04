@@ -14,6 +14,7 @@ export function Topo() {
     ['/turmas', 'Turmas', 'turmas', admin],
     ['/minhas-turmas', 'Minhas turmas', 'minhas', true],
     ['/meus-treinamentos', 'Meus treinamentos', 'treinamentos', p !== 'admin' && p !== 'instrutor'],
+    ['/lista-presenca', 'Lista de presença', 'lista', admin || p === 'gestor'],
     ['/movimentacoes', 'Movimentações', 'movimentacoes', admin],
     ['/matriz', 'Matriz', 'matriz', admin],
     ['/indicadores', 'Indicadores', 'indicadores', admin],

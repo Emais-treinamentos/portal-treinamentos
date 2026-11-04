@@ -9,6 +9,7 @@ import { AcessoBloqueado } from './paginas/AcessoBloqueado';
 import { Inicio } from './paginas/Inicio';
 import { Turmas } from './paginas/Turmas';
 import { Planejar } from './paginas/Planejar';
+import { ListaPresenca } from './paginas/ListaPresenca';
 import { MinhasTurmas } from './paginas/MinhasTurmas';
 import { Colaboradores, MeusTreinamentos } from './paginas/Colaboradores';
 import { Movimentacoes } from './paginas/Movimentacoes';
@@ -34,6 +35,7 @@ export function App() {
       <Route path="/minhas-turmas" element={<ComLogin><MinhasTurmas /></ComLogin>} />
       <Route path="/colaboradores" element={<SoPerfil perfil={[...gestao, 'gestor']}><Colaboradores /></SoPerfil>} />
       <Route path="/meus-treinamentos" element={<ComLogin><MeusTreinamentos /></ComLogin>} />
+      <Route path="/lista-presenca" element={<SoPerfil perfil={[...gestao, 'gestor']}><ListaPresenca /></SoPerfil>} />
       <Route path="/movimentacoes" element={<SoPerfil perfil={['admin']}><Movimentacoes /></SoPerfil>} />
       <Route path="/matriz" element={<SoPerfil perfil={['admin']}><Matriz /></SoPerfil>} />
       <Route path="/cadastros" element={<SoPerfil perfil={['admin']}><Cadastros /></SoPerfil>} />
