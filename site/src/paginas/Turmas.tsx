@@ -140,7 +140,7 @@ export function PainelTurma({ id, admin, aoMudar }: { id: string; admin: boolean
         <div><dt>Sala</dt><dd>{t.sala ?? 'Não definida'}</dd></div>
       </dl>
       {erro && <p className="aviso aviso-erro" role="alert">{erro}</p>}
-      {!t.instrutor_tem_acesso && aberta && <p className="aviso aviso-alerta">Este instrutor ainda não tem acesso ao portal. Crie em Acessos para ele responder.</p>}
+      {!t.instrutor_tem_acesso && aberta && <p className="aviso aviso-alerta">Este e-mail não tem perfil de instrutor no portal. Ajuste em Acessos para ele poder responder.</p>}
       {t.motivo_replanejamento && <p className="aviso aviso-alerta">{t.motivo_replanejamento}</p>}
       {t.conflitos.map((c, i) => <p className="aviso aviso-erro" key={i}>Conflito de {c.tipo} com {c.treinamento}.</p>)}
       {solicitacoes.map((s) => (

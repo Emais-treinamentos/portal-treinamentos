@@ -34,14 +34,14 @@ export function App() {
       <Route path="/turmas" element={<SoPerfil perfil={gestao}><IrParaTurma /></SoPerfil>} />
       <Route path="/formalizar" element={<SoPerfil perfil={gestao}><Formalizar /></SoPerfil>} />
       <Route path="/acompanhar" element={<SoPerfil perfil={gestao}><Acompanhar /></SoPerfil>} />
-      <Route path="/minhas-turmas" element={<ComLogin><MinhasTurmas /></ComLogin>} />
+      <Route path="/minhas-turmas" element={<SoPerfil perfil={['admin']}><MinhasTurmas /></SoPerfil>} />
       <Route path="/colaboradores" element={<SoPerfil perfil={['gestor']}><Colaboradores /></SoPerfil>} />
       <Route path="/meus-treinamentos" element={<Navigate to="/meu-perfil" replace />} />
-      <Route path="/meu-calendario" element={<ComLogin><MeuCalendario /></ComLogin>} />
-      <Route path="/meu-perfil" element={<ComLogin><MeuPerfil /></ComLogin>} />
-      <Route path="/agenda" element={<ComLogin><ConfirmarAgenda /></ComLogin>} />
-      <Route path="/calendario" element={<ComLogin><CalendarioInstrutor /></ComLogin>} />
-      <Route path="/presenca" element={<ComLogin><PresencaInstrutor /></ComLogin>} />
+      <Route path="/meu-calendario" element={<SoPerfil perfil={['colaborador', 'gestor']}><MeuCalendario /></SoPerfil>} />
+      <Route path="/meu-perfil" element={<SoPerfil perfil={['colaborador', 'gestor']}><MeuPerfil /></SoPerfil>} />
+      <Route path="/agenda" element={<SoPerfil perfil={['instrutor']}><ConfirmarAgenda /></SoPerfil>} />
+      <Route path="/calendario" element={<SoPerfil perfil={['instrutor']}><CalendarioInstrutor /></SoPerfil>} />
+      <Route path="/presenca" element={<SoPerfil perfil={['instrutor']}><PresencaInstrutor /></SoPerfil>} />
       <Route path="/satisfacao" element={<SoPerfil perfil={['admin']}><Satisfacao /></SoPerfil>} />
       <Route path="/lista-presenca" element={<SoPerfil perfil={gestao}><ListaPresenca /></SoPerfil>} />
       <Route path="/reciclagem" element={<SoPerfil perfil={['admin']}><Movimentacoes /></SoPerfil>} />

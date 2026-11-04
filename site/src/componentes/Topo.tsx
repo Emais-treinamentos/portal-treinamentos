@@ -13,9 +13,7 @@ export function Topo() {
   const { usuario, sair } = useSessao();
   const p = usuario?.perfil;
   const admin = p === 'admin';
-  // Colaborador ou gestor escalado como instrutor também precisa responder e registrar presença.
-  const escalado = useDados(() => (p === 'colaborador' || p === 'gestor' ? rpc<unknown[]>('minhas_turmas') : Promise.resolve([])), [p]);
-  const instrutor = p === 'instrutor' || (!admin && !!escalado.dados?.length);
+  const instrutor = p === 'instrutor';
   const itens: [string, string, NomeIcone, boolean][] = [
     ['/', 'Dashboard', 'inicio', admin],
     ['/cadastros', 'Cadastros', 'cadastros', admin],

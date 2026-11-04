@@ -88,14 +88,15 @@ export function CalendarioInstrutor() {
       {erro && <Mensagem tipo="erro">{erro}</Mensagem>}
       {lista.carregando && !lista.dados && <Carregando />}
       {lista.dados && <Calendario eventos={eventos} aoAbrir={setSel} legenda={[['aguardando', 'Aguardando sua confirmação'], ['confirmado', 'Confirmado'], ['presenca', 'Presença a registrar'], ['feito', 'Concluído']]} />}
-      {sel && <Dialogo aberto titulo="Treinamento" largura="larga" aoFechar={() => { setSel(null); void lista.recarregar(); }}><PainelInstrutor id={sel} aoMudar={() => void lista.recarregar()} /></Dialogo>}
+      {sel && <Dialogo aberto titulo="Treinamento" largura="larga" aoFechar={() => { setSel(null); void lista.recarregar(); }}><PainelInstrutor id={sel} consulta aoMudar={() => void lista.recarregar()} /></Dialogo>}
     </Pagina>
   );
 }
 
 const paraAgenda = (t: TurmaDetalhe): EventoAgenda => ({ id: t.id, titulo: `Treinamento: ${t.treinamento}`, inicio: t.inicio!, fim: t.fim!, sala: t.sala, detalhes: `Participantes: ${t.participantes.filter((p) => p.situacao !== 'nao_aplicavel').map((p) => p.nome).join(', ')}` });
 
-export function PainelInstrutor({ id, aoMudar }: { id: string; aoMudar: () => void }) {
+// Com consulta, só mostra: confirmar fica em Confirmar Agenda, e marcar presença, em Presença.
+export function PainelInstrutor({ id, aoMudar, consulta = false }: { id: string; aoMudar: () => void; consulta?: boolean }) {
   const d = useDados(() => rpc<TurmaDetalhe>('turma_detalhe', { p_turma: id }), [id]);
   const [erro, setErro] = useState<string | null>(null);
   const [janela, setJanela] = useState<'propor' | 'recusar' | 'solicitar' | null>(null);
@@ -111,7 +112,7 @@ export function PainelInstrutor({ id, aoMudar }: { id: string; aoMudar: () => vo
   const pessoas = t.participantes.filter((p) => p.situacao !== 'nao_aplicavel');
   const aberta = t.solicitacoes.find((s) => s.status === 'aberta');
   const ultima = t.solicitacoes.find((s) => s.status !== 'aberta');
-  const presenca = t.etapa === 'presenca';
+  const presenca = t.etapa === 'presenca' && !consulta;
   const faltam = pessoas.filter((p) => p.situacao === 'convocado').length;
   const recarregar = () => { void d.recarregar(); aoMudar(); };
   return (
@@ -135,7 +136,10 @@ export function PainelInstrutor({ id, aoMudar }: { id: string; aoMudar: () => vo
         </div>
       )}
 
-      {t.status === 'aguardando_instrutor' && !aberta && (
+      {consulta && t.status === 'aguardando_instrutor' && <p className="aviso aviso-info">Responda este treinamento na aba Confirmar Agenda.</p>}
+      {consulta && t.etapa === 'presenca' && <p className="aviso aviso-info">Registre os participantes na aba Presença.</p>}
+
+      {!consulta && t.status === 'aguardando_instrutor' && !aberta && (
         <div className="detalhe">
           <h3>Você pode aplicar este treinamento?</h3>
           <div className="linha-acoes">
@@ -166,7 +170,7 @@ export function PainelInstrutor({ id, aoMudar }: { id: string; aoMudar: () => vo
       {presenca && <p className="apoio">Pode corrigir até concluir. Nenhuma marcação se perde.</p>}
       <div className="linha-acoes">
         {presenca && <button className="botao" type="button" disabled={faltam > 0 || !pessoas.length} onClick={() => void acao(() => rpc('concluir_presenca', { p_turma: t.id }))}>Concluir presença</button>}
-        {!aberta && t.status !== 'cancelada' && t.status !== 'aguardando_instrutor' && <button className="botao botao-secundario" type="button" onClick={() => setJanela('solicitar')}>{t.presenca_concluida_em ? 'Solicitar correção' : 'Solicitar alteração'}</button>}
+        {!consulta && !aberta && t.status !== 'cancelada' && t.status !== 'aguardando_instrutor' && <button className="botao botao-secundario" type="button" onClick={() => setJanela('solicitar')}>{t.presenca_concluida_em ? 'Solicitar correção' : 'Solicitar alteração'}</button>}
       </div>
       {janela === 'propor' && <Propor id={t.id} aoFechar={() => setJanela(null)} aoSalvar={recarregar} />}
       {janela === 'recusar' && <Recusar id={t.id} aoFechar={() => setJanela(null)} aoSalvar={recarregar} />}
