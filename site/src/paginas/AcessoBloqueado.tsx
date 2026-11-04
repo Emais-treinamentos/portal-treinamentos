@@ -6,7 +6,7 @@ export function AcessoBloqueado({ motivo }: { motivo: 'sem_cadastro' | 'inativo'
   return (
     <Moldura>
       <div className="formulario">
-        <h2>{motivo === 'inativo' ? 'Acesso desativado' : 'Acesso ainda não liberado'}</h2>
+        <h1>{motivo === 'inativo' ? 'Acesso desativado' : 'Acesso ainda não liberado'}</h1>
         <p className="apoio">
           {motivo === 'inativo'
             ? `O acesso de ${sessao?.user.email} foi desativado pelo administrativo da Emais.`

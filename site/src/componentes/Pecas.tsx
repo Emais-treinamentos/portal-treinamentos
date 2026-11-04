@@ -47,3 +47,36 @@ export function FormDialogo({ titulo, rotulo, aoFechar, aoEnviar, children, larg
 export function Campo({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   return <label className="campo"><span>{rotulo}</span>{children}</label>;
 }
+
+const icones = {
+  inicio: 'M3 11l9-8 9 8v10h-6v-6H9v6H3z',
+  turmas: 'M4 5h16v16H4zM4 10h16M8 3v4M16 3v4',
+  minhas: 'M4 4h16v16H4zM8 12l3 3 5-6',
+  treinamentos: 'M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2zM4 21a2 2 0 0 1 2-2h14',
+  pessoas: 'M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 20v-2a4 4 0 0 0-3-3.9M16 2.1a4 4 0 0 1 0 7.8',
+  movimentacoes: 'M7 4L3 8l4 4M3 8h14M17 12l4 4-4 4M21 16H7',
+  matriz: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  indicadores: 'M5 20V10M12 20V4M19 20v-7',
+  cadastros: 'M3 6h6l2 3h10v10H3z',
+  acessos: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+  envios: 'M4 6h16v12H4zM4 7l8 6 8-6',
+};
+export type NomeIcone = keyof typeof icones;
+
+export function Icone({ nome }: { nome: NomeIcone }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={icones[nome]} />
+    </svg>
+  );
+}
+
+export function iniciais(nome: string) {
+  const p = nome.trim().split(/\s+/).filter((x) => x.length > 2 || x === x.toUpperCase());
+  const u = p.length ? p : [nome];
+  return ((u[0]?.[0] ?? '') + (u.length > 1 ? u[u.length - 1][0] : '')).toUpperCase();
+}
+
+export function Rosto({ nome, className = '', children }: { nome?: string; className?: string; children?: ReactNode }) {
+  return <span className={`rosto ${className}`} aria-hidden="true" title={nome}>{children ?? iniciais(nome ?? '')}</span>;
+}

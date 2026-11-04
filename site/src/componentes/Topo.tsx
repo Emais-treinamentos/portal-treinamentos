@@ -1,40 +1,43 @@
 import { NavLink } from 'react-router-dom';
 import { useSessao, nomesPerfil } from '../lib/sessao';
+import { Icone, Rosto, type NomeIcone } from './Pecas';
 
 export function Topo() {
   const { usuario, sair } = useSessao();
   const p = usuario?.perfil;
+  const admin = p === 'admin';
+  const itens: [string, string, NomeIcone, boolean][] = [
+    ['/', 'Início', 'inicio', admin],
+    ['/colaboradores', 'Colaboradores', 'pessoas', admin],
+    ['/colaboradores', 'Minha equipe', 'pessoas', p === 'gestor'],
+    ['/turmas', 'Turmas', 'turmas', admin],
+    ['/minhas-turmas', 'Minhas turmas', 'minhas', true],
+    ['/meus-treinamentos', 'Meus treinamentos', 'treinamentos', p !== 'admin' && p !== 'instrutor'],
+    ['/movimentacoes', 'Movimentações', 'movimentacoes', admin],
+    ['/matriz', 'Matriz', 'matriz', admin],
+    ['/indicadores', 'Indicadores', 'indicadores', admin],
+    ['/cadastros', 'Cadastros', 'cadastros', admin],
+    ['/acessos', 'Acessos', 'acessos', admin],
+    ['/envios', 'Envios', 'envios', admin],
+  ];
   return (
-    <header className="topo">
-      <div className="topo-linha">
-        <div className="topo-marca">
-          <img src={`${import.meta.env.BASE_URL}icone.svg`} alt="" width={28} height={28} />
-          <span>Portal de Treinamentos</span>
-        </div>
-        {usuario && (
-          <div className="topo-usuario">
-            <span className="topo-nome">
-              {usuario.nome}
-              <small>{nomesPerfil[usuario.perfil]}</small>
-            </span>
-            <button className="botao botao-discreto" type="button" onClick={sair}>Sair</button>
-          </div>
-        )}
+    <aside className="lateral">
+      <div className="lateral-marca">
+        <img src={`${import.meta.env.BASE_URL}logo-emais.png`} alt="Emais" />
+        <span>Portal de Treinamentos</span>
       </div>
       <nav className="menu" aria-label="Seções do portal">
-        {p === 'admin' && <NavLink to="/" end>Início</NavLink>}
-        {p === 'admin' && <NavLink to="/turmas">Turmas</NavLink>}
-        <NavLink to="/minhas-turmas">Minhas turmas</NavLink>
-        {p === 'admin' && <NavLink to="/colaboradores">Colaboradores</NavLink>}
-        {p === 'gestor' && <NavLink to="/colaboradores">Minha equipe</NavLink>}
-        {p !== 'admin' && p !== 'instrutor' && <NavLink to="/meus-treinamentos">Meus treinamentos</NavLink>}
-        {p === 'admin' && <NavLink to="/movimentacoes">Movimentações</NavLink>}
-        {p === 'admin' && <NavLink to="/matriz">Matriz</NavLink>}
-        {p === 'admin' && <NavLink to="/cadastros">Cadastros</NavLink>}
-        {p === 'admin' && <NavLink to="/indicadores">Indicadores</NavLink>}
-        {p === 'admin' && <NavLink to="/acessos">Acessos</NavLink>}
-        {p === 'admin' && <NavLink to="/envios">Envios</NavLink>}
+        {itens.filter((i) => i[3]).map(([para, rotulo, icone]) => (
+          <NavLink key={rotulo} to={para} end={para === '/'}><Icone nome={icone} />{rotulo}</NavLink>
+        ))}
       </nav>
-    </header>
+      {usuario && (
+        <div className="lateral-usuario">
+          <Rosto nome={usuario.nome} className="rosto-menta rosto-menor" />
+          <span className="lateral-nome">{usuario.nome}<small>{nomesPerfil[usuario.perfil]}</small></span>
+          <button className="botao botao-discreto" type="button" onClick={sair}>Sair</button>
+        </div>
+      )}
+    </aside>
   );
 }

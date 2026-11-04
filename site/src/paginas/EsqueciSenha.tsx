@@ -25,7 +25,7 @@ export function EsqueciSenha() {
     <Moldura>
       {enviado ? (
         <div className="formulario">
-          <h2>Confira seu e-mail</h2>
+          <h1>Confira seu e-mail</h1>
           <p className="apoio">
             Se <strong>{email.trim()}</strong> tiver acesso ao portal, chega em alguns minutos um link para criar a nova
             senha. Abra o link no mesmo aparelho. Se não aparecer, olhe a caixa de spam.
@@ -34,7 +34,7 @@ export function EsqueciSenha() {
         </div>
       ) : (
         <form className="formulario" onSubmit={enviar} noValidate>
-          <h2>Criar nova senha</h2>
+          <h1>Criar nova senha</h1>
           <p className="apoio">Informe o e-mail de acesso. Vamos mandar um link para você criar a senha.</p>
 
           <label className="campo">

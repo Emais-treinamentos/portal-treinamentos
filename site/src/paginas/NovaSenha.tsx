@@ -21,7 +21,7 @@ export function NovaSenha() {
     return (
       <Moldura>
         <div className="formulario">
-          <h2>Link vencido</h2>
+          <h1>Link vencido</h1>
           <p className="apoio">
             O link para criar a senha já foi usado ou passou do prazo. Peça um novo e abra no mesmo aparelho.
           </p>
@@ -52,7 +52,7 @@ export function NovaSenha() {
   return (
     <Moldura>
       <form className="formulario" onSubmit={salvar} noValidate>
-        <h2>Crie sua senha</h2>
+        <h1>Crie sua senha</h1>
         <p className="apoio">Acesso de {sessao.user.email}. Use pelo menos {TAMANHO_MINIMO} caracteres.</p>
 
         <label className="campo">

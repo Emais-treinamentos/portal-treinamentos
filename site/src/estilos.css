@@ -2,20 +2,22 @@
   --petroleo: #006666;
   --petroleo-escuro: #004b4b;
   --broto: #8ed973;
-  --fundo: #f1f5f4;
+  --fundo: #f6f8f7;
   --superficie: #ffffff;
-  --tinta: #1c3232;
-  --suave: #566b69;
-  --linha: #d2dcda;
+  --tinta: #1d2f2c;
+  --suave: #55675f;
+  --linha: #e4ebe8;
   --ambar: #d99a14;
   --analise: #8fb0bf;
   --fornecedor: #c4553f;
   --erro: #a8321f;
   --erro-fundo: #fbeae6;
 
-  --fonte: 'Barlow', system-ui, sans-serif;
-  --fonte-titulo: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif;
-  --raio-campo: 6px;
+  --fonte: 'Figtree', system-ui, sans-serif;
+  --fonte-titulo: 'Figtree', system-ui, sans-serif;
+  --raio-campo: 12px;
+  --menta: #e3f3ea;
+  --menta-tinta: #00514f;
 
   color-scheme: light;
   font-family: var(--fonte);
@@ -62,71 +64,12 @@ h2 {
 }
 
 /* Moldura das telas sem login */
-.moldura {
-  display: grid;
-  grid-template-columns: minmax(320px, 5fr) 7fr;
-  min-height: 100vh;
-}
-
-.moldura-marca {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 48px;
-  padding: 40px 48px 72px;
-  background: var(--petroleo);
-  color: #fff;
-  overflow: hidden;
-}
-
-.marca-topo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 600;
-  font-size: 1.05rem;
-}
-
-.marca-texto h1 {
-  font-size: clamp(2.6rem, 5.2vw, 4.4rem);
-  max-width: 9ch;
-}
-
-.marca-texto p {
-  margin: 20px 0 0;
-  max-width: 30ch;
-  font-size: 1.125rem;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-/* A faixa de sinalização de obra, única peça de destaque visual do portal */
-.faixa-obra {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 22px;
-  background: repeating-linear-gradient(-45deg, var(--broto) 0 16px, var(--petroleo-escuro) 16px 32px);
-}
-
-.moldura-conteudo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 24px;
-}
-
 .formulario {
   display: flex;
   flex-direction: column;
   gap: 18px;
   width: 100%;
   max-width: 380px;
-}
-
-.formulario h2 {
-  font-size: 2rem;
 }
 
 .apoio {
@@ -229,49 +172,6 @@ h2 {
 }
 
 /* Telas com login */
-.topo {
-  background: var(--superficie);
-  border-bottom: 3px solid var(--petroleo);
-}
-
-.topo-linha {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 32px;
-}
-
-.menu {
-  display: flex;
-  gap: 4px;
-  padding: 0 24px;
-  overflow-x: auto;
-}
-
-.menu a {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px 12px;
-  color: var(--suave);
-  font-weight: 500;
-  text-decoration: none;
-  white-space: nowrap;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -3px;
-}
-
-.menu a:hover {
-  color: var(--tinta);
-}
-
-.menu a.active {
-  color: var(--petroleo);
-  border-bottom-color: var(--broto);
-  font-weight: 600;
-}
-
 .contador {
   min-width: 22px;
   padding: 1px 7px;
@@ -281,35 +181,6 @@ h2 {
   font-size: 0.8rem;
   font-weight: 700;
   text-align: center;
-}
-
-.topo-marca {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--fonte-titulo);
-  font-weight: 700;
-  font-size: 1.2rem;
-  color: var(--petroleo);
-}
-
-.topo-usuario {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.topo-nome {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.topo-nome small {
-  font-weight: 400;
-  color: var(--suave);
 }
 
 .conteudo {
@@ -1235,12 +1106,7 @@ span.sub {
   padding: 14px 16px;
   background: var(--superficie);
   border: 1px solid var(--linha);
-  border-top: 4px solid var(--petroleo);
-  border-radius: 8px;
-}
-
-.cartao-alerta {
-  border-top-color: var(--ambar);
+  border-radius: 14px;
 }
 
 .cartao-rotulo {
@@ -1607,30 +1473,6 @@ a.celula:hover {
     min-width: 150px;
   }
 
-  .moldura {
-    grid-template-columns: 1fr;
-    min-height: auto;
-  }
-
-  .moldura-marca {
-    gap: 28px;
-    padding: 24px 16px 52px;
-  }
-
-  .marca-texto h1 {
-    font-size: 2.4rem;
-    max-width: none;
-  }
-
-  .marca-texto p {
-    margin-top: 10px;
-    font-size: 1rem;
-  }
-
-  .faixa-obra {
-    height: 14px;
-  }
-
   .grade-2,
   .duas-colunas {
     grid-template-columns: 1fr;
@@ -1655,22 +1497,6 @@ a.celula:hover {
 
   .dialogo-conteudo {
     padding: 16px;
-  }
-
-  .moldura-conteudo {
-    padding: 32px 16px 48px;
-  }
-
-  .topo-linha {
-    padding: 10px 16px;
-  }
-
-  .menu {
-    padding: 0 8px;
-  }
-
-  .topo-marca span {
-    display: none;
   }
 
   .conteudo {
@@ -2375,7 +2201,6 @@ button.celula:hover {
 .linha-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
 .tarefa-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: var(--superficie); border: 1px solid var(--linha); border-radius: 8px; margin-bottom: 8px; }
 .tarefa-fila small { display: block; color: var(--suave); }
-.tarefa-urgente { border-left: 4px solid var(--erro); }
 .quadro-matriz { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px 16px; }
 .aviso-cargo { font-size: 0.88rem; color: #8a5a00; }
 @media (max-width: 860px) {
@@ -2383,3 +2208,95 @@ button.celula:hover {
   .painel { position: static; }
   .pessoa { align-items: flex-start; }
 }
+
+/* Visual de Gente e Gestão: menu lateral, pessoas em primeiro plano */
+h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
+.pagina { display: flex; min-height: 100vh; }
+.conteudo { flex: 1 1 auto; min-width: 0; width: 100%; max-width: 1180px; margin: 0; padding: 36px 40px 56px; }
+.cabecalho { margin-bottom: 24px; }
+.cabecalho h1 { font-size: clamp(1.7rem, 3vw, 1.9rem); margin-bottom: 6px; }
+.cabecalho .apoio { margin: 0; font-size: 1.05rem; }
+
+.lateral { flex: 0 0 248px; position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 24px 16px 16px; background: var(--superficie); border-right: 1px solid var(--linha); }
+.lateral-marca { padding: 0 12px; }
+.lateral-marca img { display: block; height: 26px; width: auto; }
+.lateral-marca span { display: block; margin-top: 8px; font-size: 0.86rem; color: var(--suave); }
+.menu { display: flex; flex-direction: column; gap: 2px; }
+.menu a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 12px; color: #3b4f49; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.menu a:hover { background: #f1f6f4; }
+.menu a.active { background: var(--menta); color: var(--menta-tinta); font-weight: 600; }
+.lateral-usuario { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 12px 4px 0; border-top: 1px solid var(--linha); }
+.lateral-nome { flex: 1; min-width: 0; font-weight: 600; font-size: 0.92rem; line-height: 1.25; overflow-wrap: anywhere; }
+.lateral-nome small { display: block; font-weight: 400; font-size: 0.82rem; color: var(--suave); }
+.lateral-usuario .botao-discreto { padding: 6px 8px; font-size: 0.92rem; min-height: 44px; }
+
+.rosto { flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: #e6efec; color: #0b5a4a; font-weight: 600; font-size: 0.875rem; }
+.rosto-menta { background: #ddf2e4; }
+.rosto-menor { width: 38px; height: 38px; }
+.rostos { display: flex; flex: none; padding-left: 8px; }
+.rostos .rosto { width: 30px; height: 30px; margin-left: -8px; border: 2px solid var(--superficie); background: #ddf2e4; font-size: 0.69rem; }
+
+.situacao { display: flex; flex-wrap: wrap; align-items: center; gap: 24px 40px; padding: 22px 24px; margin-bottom: 28px; background: var(--superficie); border: 1px solid var(--linha); border-radius: 18px; }
+.situacao-numero { flex: 1 1 200px; display: flex; flex-direction: column; font-size: 0.9rem; color: var(--suave); }
+.situacao-numero strong { font-size: 2.35rem; font-weight: 700; line-height: 1.15; color: var(--petroleo); }
+.situacao-pessoas { flex: 2 1 340px; display: flex; flex-direction: column; gap: 10px; }
+.situacao-barra { display: flex; gap: 2px; height: 12px; border-radius: 6px; overflow: hidden; background: var(--linha); }
+.situacao-barra i { display: block; }
+.situacao-legenda { display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 0.92rem; }
+.situacao-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.situacao-legenda i { width: 10px; height: 10px; border-radius: 50%; }
+.situacao-legenda strong { font-weight: 600; }
+.cor-dia { background: var(--petroleo); }
+.cor-andamento { background: var(--broto); }
+.cor-sem { background: #e9a15b; }
+
+.inicio-colunas { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; align-items: start; }
+.inicio-coluna { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.inicio-coluna h2 { font-size: 1.125rem; font-weight: 600; }
+.inicio-coluna h2:not(:first-child) { margin-top: 12px; }
+.cartao-pessoa { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--superficie); border: 1px solid var(--linha); border-radius: 14px; }
+.cartao-pessoa-texto { flex: 1; min-width: 0; }
+.cartao-pessoa-texto strong { display: block; font-weight: 600; }
+.cartao-pessoa-texto small { display: block; font-size: 0.875rem; color: var(--suave); overflow-wrap: anywhere; }
+.cartao-pessoa > a { flex: none; display: inline-flex; align-items: center; min-height: 44px; color: var(--petroleo); font-weight: 600; font-size: 0.94rem; text-decoration: none; }
+.cartao-pessoa > a:hover { text-decoration: underline; }
+.selo-urgente { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #fdf1e3; color: #8a4208; font-size: 0.75rem; font-weight: 600; vertical-align: 1px; }
+
+.moldura { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; background: var(--superficie); }
+.moldura-conteudo { display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+.moldura-coluna { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 26px; }
+.moldura-logo { display: block; height: 30px; width: auto; align-self: flex-start; }
+.moldura-marca { display: flex; flex-direction: column; justify-content: center; gap: 24px; padding: 48px 56px; background: var(--menta); color: #0b4a44; }
+.moldura-marca p { margin: 0; color: #2f4f48; }
+.moldura-marca .moldura-frase { max-width: 440px; font-size: 1.75rem; font-weight: 600; line-height: 1.25; color: #0b4a44; }
+.moldura-rostos { display: flex; padding-left: 12px; }
+.moldura-rostos span { width: 64px; height: 64px; margin-left: -12px; border: 3px solid var(--menta); border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 1.1rem; }
+.formulario { max-width: none; }
+.formulario h1 { font-size: 1.75rem; }
+
+.tarefa-fila, .item-lista { border-radius: 14px; }
+.painel { border-radius: 18px; }
+.grupo-titulo { margin: 18px 0 8px; font-size: 1rem; color: var(--tinta); text-transform: none; letter-spacing: 0; }
+.bloco-titulo { font-size: 1.125rem; font-weight: 600; }
+.vazio { border-radius: 14px; }
+.tabela thead th { text-transform: none; letter-spacing: 0; }
+
+@media (max-width: 860px) {
+  .pagina { flex-direction: column; }
+  .lateral { flex: none; position: static; height: auto; overflow: visible; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 12px; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--linha); }
+  .lateral-marca { padding: 0; }
+  .lateral-marca span { display: none; }
+  .lateral-usuario { margin: 0; padding: 0; border: 0; }
+  .lateral-usuario .rosto { display: none; }
+  .lateral-nome { text-align: right; }
+  .menu { order: 3; flex: 0 0 100%; min-width: 0; flex-direction: row; gap: 4px; overflow-x: auto; }
+  .conteudo { padding: 24px 16px 40px; }
+  .moldura { grid-template-columns: minmax(0, 1fr); }
+  .moldura-marca { display: none; }
+  .situacao { padding: 18px; }
+  .inicio-colunas { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Campos com contorno visível, mesmo com as linhas mais suaves do restante */
+.campo input, .campo select, .campo textarea, .campo-busca input, .alternar button { border-color: #a9bab5; }
+.painel .campo-grupo { display: flex; flex-direction: column; gap: 6px; }

@@ -21,8 +21,7 @@ export function Entrar() {
   return (
     <Moldura>
       <form className="formulario" onSubmit={entrar} noValidate>
-        <h2>Entrar</h2>
-        <p className="apoio">Use o seu e-mail da Emais.</p>
+        <h1>Que bom ver você</h1>
 
         <label className="campo">
           <span>E-mail</span>
