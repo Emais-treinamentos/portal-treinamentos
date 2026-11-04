@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pagina, Mensagem } from '../componentes/Pagina';
+import { Mensagem } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Campo, FormDialogo } from '../componentes/Pecas';
 import { dataBR, rpc, textoErro, useDados } from '../lib/api';
@@ -11,6 +11,10 @@ export function Matriz() {
   const revisoes = useDados(async () => (await supabase.from('matriz_revisoes').select('id, numero, status, descricao, data_inicio_vigencia').order('criado_em', { ascending: false })).data ?? []);
   const cargos = useDados(async () => (await supabase.from('cargos').select('id, nome, departamentos(nome)').eq('ativo', true).order('nome')).data ?? []);
   const [cargo, setCargo] = useState('');
+  const [dep, setDep] = useState('');
+  const [busca, setBusca] = useState('');
+  const nomeDep = (c: { departamentos: unknown }) => (c.departamentos as { nome: string } | null)?.nome ?? '';
+  const deps = [...new Set((cargos.dados ?? []).map(nomeDep).filter(Boolean))].sort();
   const quadro = useDados(() => (cargo ? rpc<Item[]>('matriz_do_cargo', { p_cargo: cargo }) : Promise.resolve([] as Item[])), [cargo]);
   const [erro, setErro] = useState<string | null>(null);
   const [janela, setJanela] = useState<'iniciar' | 'publicar' | null>(null);
@@ -22,17 +26,21 @@ export function Matriz() {
   }
   const mudancas = (quadro.dados ?? []).filter((i) => i.marcado !== i.vigente);
   return (
-    <Pagina titulo="Matriz" apoio="Cargo por treinamento, sempre por revisão. O que vale só muda quando a revisão é publicada."
-      acoes={aberta ? (<><button className="botao" type="button" onClick={() => setJanela('publicar')}>Publicar {aberta.numero}</button><button className="botao botao-discreto" type="button" onClick={() => void acao(() => rpc('cancelar_revisao'))}>Cancelar revisão</button></>) : <button className="botao" type="button" onClick={() => setJanela('iniciar')}>Iniciar revisão</button>}>
+    <>
+      <div className="linha-acoes matriz-acoes">{aberta ? (<><button className="botao" type="button" onClick={() => setJanela('publicar')}>Publicar {aberta.numero}</button><button className="botao botao-discreto" type="button" onClick={() => void acao(() => rpc('cancelar_revisao'))}>Cancelar revisão</button></>) : <button className="botao" type="button" onClick={() => setJanela('iniciar')}>Iniciar revisão</button>}</div>
       {erro && <Mensagem tipo="erro">{erro}</Mensagem>}
       {aberta ? <p className="aviso aviso-alerta aviso-faixa">Revisão {aberta.numero} aberta: {aberta.descricao}</p> : <p className="aviso aviso-info aviso-faixa">Matriz travada. Inicie uma revisão para alterar.</p>}
-      <Campo rotulo="Cargo"><select value={cargo} onChange={(e) => setCargo(e.target.value)}><option value="">Escolha um cargo</option>{(cargos.dados ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></Campo>
+      <div className="filtros matriz-filtros">
+        <Campo rotulo="Departamento"><select value={dep} onChange={(e) => { setDep(e.target.value); setCargo(''); }}><option value="">Todos</option>{deps.map((d) => <option key={d}>{d}</option>)}</select></Campo>
+        <Campo rotulo="Cargo"><select value={cargo} onChange={(e) => setCargo(e.target.value)}><option value="">Escolha um cargo</option>{(cargos.dados ?? []).filter((c) => !dep || nomeDep(c) === dep).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></Campo>
+        <Campo rotulo="Pesquisar treinamento"><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} /></Campo>
+      </div>
       {quadro.carregando && cargo && <Carregando />}
       {cargo && !!quadro.dados?.length && (
         <>
           {!!mudancas.length && <p className="apoio">{mudancas.length} mudança(s) nesta revisão para este cargo: {mudancas.map((m) => `${m.marcado ? 'entra' : 'sai'} ${m.treinamento}`).join('; ')}.</p>}
           <div className="quadro-matriz" style={{ marginTop: 12 }}>
-            {quadro.dados.map((i) => <label className="opcao" key={i.treinamento_id}><input type="checkbox" disabled={!aberta} checked={i.marcado} onChange={(e) => void acao(() => rpc('alternar_vinculo', { p_cargo: cargo, p_treinamento: i.treinamento_id, p_marcar: e.target.checked }))} />{i.treinamento}</label>)}
+            {quadro.dados.filter((i) => i.treinamento.toLowerCase().includes(busca.trim().toLowerCase())).map((i) => <label className="opcao" key={i.treinamento_id}><input type="checkbox" disabled={!aberta} checked={i.marcado} onChange={(e) => void acao(() => rpc('alternar_vinculo', { p_cargo: cargo, p_treinamento: i.treinamento_id, p_marcar: e.target.checked }))} />{i.treinamento}</label>)}
           </div>
         </>
       )}
@@ -42,7 +50,7 @@ export function Matriz() {
       </section>
       {janela === 'iniciar' && <Iniciar aoFechar={() => setJanela(null)} aoSalvar={() => void revisoes.recarregar()} />}
       {janela === 'publicar' && <Publicar aoFechar={() => setJanela(null)} aoSalvar={() => { void revisoes.recarregar(); void quadro.recarregar(); }} />}
-    </Pagina>
+    </>
   );
 }
 

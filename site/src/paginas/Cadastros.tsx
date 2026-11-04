@@ -1,25 +1,37 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { CadastroColaboradores } from './Colaboradores';
+import { Matriz } from './Matriz';
 import { Pagina, Mensagem } from '../componentes/Pagina';
 import { Campo, FormDialogo } from '../componentes/Pecas';
-import { cargaTexto, textoErro, useDados } from '../lib/api';
+import { cargaTexto, rpc, textoErro, useDados } from '../lib/api';
 import { supabase } from '../lib/supabase';
 
 type Treinamento = { id: string; nome: string; carga_minutos: number; eh_politica: boolean; individual_por_colaborador: boolean; ativo: boolean };
 
+const abas = [['colaboradores', 'Colaboradores'], ['inativos', 'Inativos'], ['cargos', 'Cargos'], ['treinamentos', 'Treinamentos'], ['matriz', 'Matriz'], ['departamentos', 'Departamentos'], ['salas', 'Salas']] as const;
+type Aba = (typeof abas)[number][0];
+
 export function Cadastros() {
-  const [aba, setAba] = useState<'treinamentos' | 'cargos' | 'departamentos' | 'salas'>('treinamentos');
+  const [params] = useSearchParams();
+  const [aba, setAba] = useState<Aba>((params.get('aba') as Aba) ?? 'colaboradores');
   return (
-    <Pagina titulo="Cadastros" apoio="Colaboradores ficam na tela Colaboradores, e a matriz, na tela Matriz.">
-      <div className="chips chips-filtro" role="group">
-        {(['treinamentos', 'cargos', 'departamentos', 'salas'] as const).map((a) => <button key={a} type="button" className="chip" aria-pressed={aba === a} onClick={() => setAba(a)}>{a[0].toUpperCase() + a.slice(1)}</button>)}
+    <Pagina titulo="Cadastros" apoio="Gerencie colaboradores, cargos, treinamentos e a matriz de obrigatoriedade.">
+      <div className="chips chips-filtro" role="group" aria-label="Cadastros">
+        {abas.map(([a, nome]) => <button key={a} type="button" className="chip" aria-pressed={aba === a} onClick={() => setAba(a)}>{nome}</button>)}
       </div>
-      {aba === 'treinamentos' && <Treinamentos />}
+      {aba === 'colaboradores' && <CadastroColaboradores />}
+      {aba === 'inativos' && <CadastroColaboradores inativos />}
       {aba === 'cargos' && <Cargos />}
+      {aba === 'treinamentos' && <Treinamentos />}
+      {aba === 'matriz' && <Matriz />}
       {aba === 'departamentos' && <Departamentos />}
       {aba === 'salas' && <Salas />}
     </Pagina>
   );
 }
+
+const useVinculos = () => useDados(() => rpc<{ cargo_id: string; treinamento_id: string }[]>('matriz_vigente_hoje'));
 
 async function ok<T extends { error: { message: string } | null }>(p: PromiseLike<T>) {
   const r = await p;
@@ -29,13 +41,21 @@ async function ok<T extends { error: { message: string } | null }>(p: PromiseLik
 
 function Treinamentos() {
   const l = useDados(async () => ((await supabase.from('treinamentos').select('*').order('nome')).data ?? []) as Treinamento[]);
+  const v = useVinculos();
   const [ed, setEd] = useState<Treinamento | 'novo' | null>(null);
+  const [busca, setBusca] = useState(''); const [status, setStatus] = useState('');
+  const q = busca.trim().toLowerCase();
+  const linhas = (l.dados ?? []).filter((t) => (!q || t.nome.toLowerCase().includes(q)) && (!status || (status === 'ativos') === t.ativo));
   return (
     <>
-      <button className="botao" type="button" onClick={() => setEd('novo')}>Novo treinamento</button>
-      <div className="tabela-rolagem" style={{ marginTop: 12 }}>
-        <table className="tabela"><thead><tr><th>Treinamento</th><th>Carga</th><th>Política</th><th>Individual</th><th>Situação</th><th /></tr></thead>
-          <tbody>{(l.dados ?? []).map((t) => <tr key={t.id}><td>{t.nome}</td><td>{cargaTexto(t.carga_minutos)}</td><td>{t.eh_politica ? 'Sim' : 'Não'}</td><td>{t.individual_por_colaborador ? 'Sim' : 'Não'}</td><td>{t.ativo ? 'Ativo' : 'Inativo'}</td><td><button className="botao botao-discreto botao-pequeno" type="button" onClick={() => setEd(t)}>Editar</button></td></tr>)}</tbody>
+      <div className="filtros cadastro-topo">
+        <Campo rotulo="Pesquisar"><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} /></Campo>
+        <Campo rotulo="Status"><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">Todos</option><option value="ativos">Ativos</option><option value="inativos">Inativos</option></select></Campo>
+        <button className="botao" type="button" onClick={() => setEd('novo')}>Novo treinamento</button>
+      </div>
+      <div className="tabela-rolagem">
+        <table className="tabela"><thead><tr><th>Treinamento</th><th>Carga horária</th><th>Cargos vinculados</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody>{linhas.map((t) => <tr key={t.id}><td>{t.nome}</td><td>{cargaTexto(t.carga_minutos)}</td><td>{(v.dados ?? []).filter((x) => x.treinamento_id === t.id).length}</td><td>{t.ativo ? 'Ativo' : 'Inativo'}</td><td><button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setEd(t)}>Editar</button></td></tr>)}</tbody>
         </table>
       </div>
       {ed && <EditarTreinamento t={ed === 'novo' ? null : ed} aoFechar={() => setEd(null)} aoSalvar={() => void l.recarregar()} />}
@@ -65,15 +85,26 @@ function EditarTreinamento({ t, aoFechar, aoSalvar }: { t: Treinamento | null; a
 function Cargos() {
   const l = useDados(async () => (await supabase.from('cargos').select('id, nome, ativo, departamento_id, departamentos(nome)').order('nome')).data ?? []);
   const deps = useDados(async () => (await supabase.from('departamentos').select('id, nome').order('nome')).data ?? []);
+  const v = useVinculos();
   const [novo, setNovo] = useState(false); const [nome, setNome] = useState(''); const [dep, setDep] = useState('');
+  const [filtro, setFiltro] = useState(''); const [ativos, setAtivos] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const todos = l.dados ?? [];
+  const linhas = todos.filter((c) => c.ativo === ativos && (!filtro || c.departamento_id === filtro));
   return (
     <>
       {erro && <Mensagem tipo="erro">{erro}</Mensagem>}
-      <button className="botao" type="button" onClick={() => setNovo(true)}>Novo cargo</button>
-      <div className="tabela-rolagem" style={{ marginTop: 12 }}>
-        <table className="tabela"><thead><tr><th>Cargo</th><th>Departamento</th><th>Situação</th><th /></tr></thead>
-          <tbody>{(l.dados ?? []).map((c) => { const d = c.departamentos as unknown as { nome: string } | null; return <tr key={c.id}><td>{c.nome}</td><td>{d?.nome}</td><td>{c.ativo ? 'Ativo' : 'Inativo'}</td><td><button className="botao botao-discreto botao-pequeno" type="button" onClick={() => void ok(supabase.from('cargos').update({ ativo: !c.ativo }).eq('id', c.id)).then(() => l.recarregar()).catch((e) => setErro(textoErro(e)))}>{c.ativo ? 'Inativar' : 'Reativar'}</button></td></tr>; })}</tbody>
+      <div className="filtros cadastro-topo">
+        <Campo rotulo="Departamento"><select value={filtro} onChange={(e) => setFiltro(e.target.value)}><option value="">Todos</option>{(deps.dados ?? []).map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}</select></Campo>
+        <div className="chips" role="group" aria-label="Situação do cargo">
+          <button type="button" className="chip" aria-pressed={ativos} onClick={() => setAtivos(true)}>Ativos<small>{todos.filter((c) => c.ativo).length}</small></button>
+          <button type="button" className="chip" aria-pressed={!ativos} onClick={() => setAtivos(false)}>Inativos<small>{todos.filter((c) => !c.ativo).length}</small></button>
+        </div>
+        <button className="botao" type="button" onClick={() => setNovo(true)}>Novo cargo</button>
+      </div>
+      <div className="tabela-rolagem">
+        <table className="tabela"><thead><tr><th>Cargo</th><th>Departamento</th><th>Treinamentos</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody>{linhas.map((c) => { const d = c.departamentos as unknown as { nome: string } | null; return <tr key={c.id}><td>{c.nome}</td><td>{d?.nome}</td><td>{(v.dados ?? []).filter((x) => x.cargo_id === c.id).length}</td><td>{c.ativo ? 'Ativo' : 'Inativo'}</td><td><button className="botao botao-secundario botao-pequeno" type="button" onClick={() => void ok(supabase.from('cargos').update({ ativo: !c.ativo }).eq('id', c.id)).then(() => l.recarregar()).catch((e) => setErro(textoErro(e)))}>{c.ativo ? 'Inativar' : 'Reativar'}</button></td></tr>; })}</tbody>
         </table>
       </div>
       {novo && <FormDialogo titulo="Novo cargo" rotulo="Salvar" aoFechar={() => setNovo(false)} aoEnviar={async () => { await ok(supabase.from('cargos').insert({ nome: nome.trim(), departamento_id: dep })); setNome(''); void l.recarregar(); }}>

@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { Pagina, Mensagem } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Campo, Farol, FormDialogo, SeloSituacao } from '../componentes/Pecas';
 import { cargaTexto, dataBR, hora, horaFim, nomesEtapa, nomesStatus, nomesTipoSolicitacao, rpc, textoErro, useDados, type Etapa, type Solicitacao, type TurmaDetalhe } from '../lib/api';
 import { gerarListaPresenca } from '../lib/documentos';
 import { supabase } from '../lib/supabase';
-import { useSessao } from '../lib/sessao';
+import { Dialogo } from '../componentes/Dialogo';
 
 type TurmaLinha = { id: string; treinamento: string; etapa: Etapa; status: string; data: string | null; hora: string | null; sala: string | null; instrutor_email: string; participantes: number; solicitacao_aberta: boolean; conflito: boolean; motivo: string | null };
-type Planejar = { treinamento_id: string; treinamento: string; tipo: string; pessoas: { colaborador_id: string; nome: string; cargo: string; motivo: string }[]; cargos: { cargo_id: string; nome: string }[] };
-const etapas: Etapa[] = ['a_planejar', 'aguardando_instrutor', 'formalizar', 'agendadas', 'presenca', 'realizadas', 'canceladas'];
+const etapasFormalizar: Etapa[] = ['a_planejar', 'aguardando_instrutor', 'formalizar'];
+const etapasAcompanhar: Etapa[] = ['agendadas', 'presenca', 'realizadas', 'canceladas'];
 
 export function resumoTurma(t: TurmaLinha) {
   if (t.solicitacao_aberta) return 'Solicitação aberta';
@@ -21,68 +21,91 @@ export function resumoTurma(t: TurmaLinha) {
 }
 const corTurma = (t: TurmaLinha) => (t.solicitacao_aberta || t.conflito || t.status === 'precisa_replanejar' ? 'vermelho' : t.status === 'agenda_confirmada' && t.sala ? 'verde' : ['realizada'].includes(t.status) ? 'verde' : ['cancelada', 'encerrada'].includes(t.status) ? 'cinza' : 'amarelo');
 
-export function Turmas() {
-  const { usuario } = useSessao();
-  const admin = usuario?.perfil === 'admin';
-  const [params, setParams] = useSearchParams();
-  const [etapa, setEtapa] = useState<Etapa>((params.get('etapa') as Etapa) ?? 'formalizar');
+function useTurmas() {
+  return useDados(() => rpc<TurmaLinha[]>('listar_turmas'));
+}
+
+// Links antigos e atalhos para uma turma: abre a aba certa conforme a etapa dela.
+export function IrParaTurma() {
+  const [params] = useSearchParams();
+  const turmas = useTurmas();
+  const id = params.get('turma');
+  if (params.get('etapa') === 'a_planejar') return <Navigate to="/planejar" replace />;
+  if (!id) return <Navigate to="/acompanhar" replace />;
+  if (!turmas.dados) return turmas.erro ? <Navigate to="/acompanhar" replace /> : <Carregando />;
+  const t = turmas.dados.find((x) => x.id === id);
+  const aba = t && etapasFormalizar.includes(t.etapa) ? 'formalizar' : 'acompanhar';
+  return <Navigate to={`/${aba}?turma=${id}`} replace />;
+}
+
+export function Formalizar() {
+  const [params] = useSearchParams();
   const [busca, setBusca] = useState('');
   const [sel, setSel] = useState<string | null>(params.get('turma'));
-  const [msg, setMsg] = useState<string | null>(null);
-  const turmas = useDados(() => rpc<TurmaLinha[]>('listar_turmas'));
-  const fila = useDados(() => (admin ? rpc<Planejar[]>('a_planejar') : Promise.resolve([] as Planejar[])), [admin]);
-
-  useEffect(() => {
-    const t = params.get('turma');
-    const linha = turmas.dados?.find((x) => x.id === t);
-    if (linha) { setSel(linha.id); setEtapa(linha.etapa); setParams({}, { replace: true }); }
-  }, [params, turmas.dados, setParams]);
-
-  const recarregar = () => { void turmas.recarregar(); void fila.recarregar(); };
-  const contagem = (e: Etapa) => (e === 'a_planejar' ? (fila.dados?.length ?? 0) : (turmas.dados ?? []).filter((t) => t.etapa === e).length);
+  const turmas = useTurmas();
   const q = busca.trim().toLowerCase();
-  const lista = (turmas.dados ?? []).filter((t) => t.etapa === etapa && (!q || `${t.treinamento} ${t.instrutor_email} ${t.sala ?? ''}`.toLowerCase().includes(q)));
-
+  const peso = (t: TurmaLinha) => (t.etapa === 'formalizar' ? 0 : 1);
+  const lista = (turmas.dados ?? []).filter((t) => etapasFormalizar.includes(t.etapa) && (!q || `${t.treinamento} ${t.instrutor_email}`.toLowerCase().includes(q))).sort((a, b) => peso(a) - peso(b));
   return (
-    <Pagina titulo="Turmas" apoio="Todo o ciclo da turma, do planejamento à presença, em uma tela." acoes={admin ? <Link className="botao" to="/planejar">Planejar treinamentos</Link> : undefined}>
-      {msg && <Mensagem tipo="ok" aoFechar={() => setMsg(null)}>{msg}</Mensagem>}
+    <Pagina titulo="Formalizar Convites" apoio="Revise os treinamentos consolidados, verifique conflitos e confirme o envio.">
       {turmas.erro && <Mensagem tipo="erro">{turmas.erro}</Mensagem>}
-      <div className="chips chips-filtro" role="group" aria-label="Etapas">
-        {etapas.map((e) => <button key={e} type="button" className="chip" aria-pressed={etapa === e} onClick={() => { setEtapa(e); setSel(null); recarregar(); }}>{nomesEtapa[e]}<small>{contagem(e)}</small></button>)}
+      {turmas.carregando && !turmas.dados && <Carregando />}
+      <div className="mestre-detalhe">
+        <div>
+          <label className="campo campo-busca"><span className="sr">Buscar</span><input type="search" placeholder="Buscar treinamento ou instrutor" value={busca} onChange={(e) => setBusca(e.target.value)} /></label>
+          <div className="lista-turmas">
+            {turmas.dados && !lista.length && <p className="vazio">Nenhum convite a formalizar.</p>}
+            {lista.map((t) => (
+              <button key={t.id} type="button" className="item-lista" aria-current={sel === t.id} onClick={() => setSel(t.id)}>
+                <Farol cor={corTurma(t)} />
+                <span><strong>{t.treinamento}</strong><small>{resumoTurma(t)}</small><small>{dataBR(t.data)} {hora(t.hora)} · {t.instrutor_email}</small></span>
+                <small>{t.participantes} pessoa(s)</small>
+              </button>
+            ))}
+          </div>
+        </div>
+        {sel ? <PainelTurma id={sel} admin aoMudar={() => void turmas.recarregar()} /> : <p className="vazio">Escolha um treinamento para ver os detalhes.</p>}
+      </div>
+    </Pagina>
+  );
+}
+
+export function Acompanhar() {
+  const [params, setParams] = useSearchParams();
+  const [etapa, setEtapa] = useState<Etapa>('agendadas');
+  const [sel, setSel] = useState<string | null>(params.get('turma'));
+  const turmas = useTurmas();
+  useEffect(() => {
+    const t = turmas.dados?.find((x) => x.id === params.get('turma'));
+    if (t) { if (etapasAcompanhar.includes(t.etapa)) setEtapa(t.etapa); setSel(t.id); setParams({}, { replace: true }); }
+  }, [params, turmas.dados, setParams]);
+  const conta = (e: Etapa) => (turmas.dados ?? []).filter((t) => t.etapa === e).length;
+  const linhas = (turmas.dados ?? []).filter((t) => t.etapa === etapa);
+  return (
+    <Pagina titulo="Acompanhar Treinamentos" apoio="Treinamentos confirmados: execução, presença e resultado.">
+      {turmas.erro && <Mensagem tipo="erro">{turmas.erro}</Mensagem>}
+      <div className="chips chips-filtro" role="group" aria-label="Situação">
+        {etapasAcompanhar.map((e) => <button key={e} type="button" className="chip" aria-pressed={etapa === e} onClick={() => { setEtapa(e); void turmas.recarregar(); }}>{nomesEtapa[e]}<small>{conta(e)}</small></button>)}
       </div>
       {turmas.carregando && !turmas.dados && <Carregando />}
-      {etapa === 'a_planejar' ? (
-        <div className="lista-turmas">
-          {(fila.dados ?? []).length === 0 && <p className="vazio">Ninguém aguardando turma.</p>}
-          {(fila.dados ?? []).map((p) => (
-            <div className="tarefa-fila" key={p.treinamento_id}>
-              <span>
-                <strong>{p.treinamento}</strong>
-                <small>{p.pessoas.map((x) => x.nome).join(', ')}</small>
-                <small>{p.cargos.map((c) => c.nome).join(', ')}</small>
-              </span>
-              {admin && <Link className="botao botao-pequeno" to={`/planejar?cargos=${p.cargos.map((c) => c.cargo_id).join(',')}`}>Planejar</Link>}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="mestre-detalhe">
-          <div>
-            <label className="campo campo-busca"><span className="sr">Buscar</span><input type="search" placeholder="Buscar turma, treinamento ou instrutor" value={busca} onChange={(e) => setBusca(e.target.value)} /></label>
-            <div className="lista-turmas">
-              {!lista.length && <p className="vazio">Nenhuma turma nesta etapa.</p>}
-              {lista.map((t) => (
-                <button key={t.id} type="button" className="item-lista" aria-current={sel === t.id} onClick={() => setSel(t.id)}>
-                  <Farol cor={corTurma(t)} />
-                  <span><strong>{t.treinamento}</strong><small>{resumoTurma(t)}</small><small>{dataBR(t.data)} {hora(t.hora)} · {t.instrutor_email}</small></span>
-                  <small>{t.participantes} pessoa(s)</small>
-                </button>
+      {turmas.dados && (
+        <div className="tabela-rolagem">
+          <table className="tabela">
+            <thead><tr><th>Treinamento</th><th>Instrutor</th><th>Data</th><th>Horário</th><th>Sala</th><th>Participantes</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody>
+              {!linhas.length && <tr><td colSpan={8}>Nenhum treinamento nesta situação.</td></tr>}
+              {linhas.map((t) => (
+                <tr key={t.id}>
+                  <td>{t.treinamento}</td><td>{t.instrutor_email}</td><td>{dataBR(t.data)}</td><td>{hora(t.hora)}</td><td>{t.sala}</td><td>{t.participantes}</td>
+                  <td><Farol cor={corTurma(t)} /> {resumoTurma(t)}</td>
+                  <td><button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setSel(t.id)}>Ver</button></td>
+                </tr>
               ))}
-            </div>
-          </div>
-          {sel ? <PainelTurma id={sel} admin={admin} aoMudar={recarregar} /> : <p className="vazio">Escolha uma turma para ver os detalhes.</p>}
+            </tbody>
+          </table>
         </div>
       )}
+      {sel && <Dialogo aberto titulo="Treinamento" largura="larga" aoFechar={() => { setSel(null); void turmas.recarregar(); }}><PainelTurma id={sel} admin aoMudar={() => void turmas.recarregar()} /></Dialogo>}
     </Pagina>
   );
 }

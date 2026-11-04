@@ -54,6 +54,63 @@ export function Colaboradores() {
   );
 }
 
+// Aba de Cadastros: só dados e cargo. Documentos ficam em Lista de Presença.
+export function CadastroColaboradores({ inativos = false }: { inativos?: boolean }) {
+  const lista = useDados(() => rpc<Linha[]>('painel_colaboradores'));
+  const emails = useDados(async () => (await supabase.from('colaboradores').select('id, email')).data ?? []);
+  const [busca, setBusca] = useState('');
+  const [acao, setAcao] = useState<{ id: string; tipo: 'editar' | 'mover' | 'historico' } | null>(null);
+  const [novo, setNovo] = useState(false);
+  const q = busca.trim().toLowerCase();
+  const linhas = (lista.dados ?? []).filter((c) => c.ativo === !inativos && (!q || `${c.nome} ${c.cargo}`.toLowerCase().includes(q)));
+  const email = (id: string) => emails.dados?.find((e) => e.id === id)?.email;
+  const fechar = () => { setAcao(null); void lista.recarregar(); void emails.recarregar(); };
+  return (
+    <>
+      {lista.erro && <Mensagem tipo="erro">{lista.erro}</Mensagem>}
+      {lista.carregando && !lista.dados && <Carregando />}
+      <div className="filtros cadastro-topo">
+        <Campo rotulo="Buscar"><input type="search" placeholder="Nome ou cargo" value={busca} onChange={(e) => setBusca(e.target.value)} /></Campo>
+        {!inativos && <button className="botao" type="button" onClick={() => setNovo(true)}>Novo colaborador</button>}
+      </div>
+      <div className="tabela-rolagem">
+        <table className="tabela">
+          <thead><tr><th>Nome e e-mail</th><th>Departamento</th><th>{inativos ? 'Último cargo' : 'Cargo'}</th><th>Ações</th></tr></thead>
+          <tbody>
+            {lista.dados && !linhas.length && <tr><td colSpan={4}>Ninguém nesta lista.</td></tr>}
+            {linhas.map((c) => (
+              <tr key={c.id}>
+                <td><strong className="celula-nome">{c.nome}</strong><small className="celula-apoio">{email(c.id)}</small></td><td>{c.departamento}</td><td>{c.cargo}</td>
+                <td><span className="linha-acoes">
+                  <button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setAcao({ id: c.id, tipo: 'editar' })}>Editar dados</button>
+                  {!inativos && <button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setAcao({ id: c.id, tipo: 'mover' })}>Alterar cargo</button>}
+                  <button className="botao botao-discreto botao-pequeno" type="button" onClick={() => setAcao({ id: c.id, tipo: 'historico' })}>Histórico</button>
+                </span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {acao && <AcaoColaborador key={acao.id + acao.tipo} {...acao} aoFechar={fechar} />}
+      {novo && <EditarColaborador aoFechar={() => setNovo(false)} aoSalvar={() => { void lista.recarregar(); void emails.recarregar(); }} />}
+    </>
+  );
+}
+
+function AcaoColaborador({ id, tipo, aoFechar }: { id: string; tipo: 'editar' | 'mover' | 'historico'; aoFechar: () => void }) {
+  const d = useDados(() => rpc<SituacaoColaborador>('situacao_colaborador', { p_colaborador: id }), [id]);
+  const s = d.dados;
+  if (!s) return d.erro ? <Mensagem tipo="erro">{d.erro}</Mensagem> : null;
+  if (tipo === 'editar') return <EditarColaborador atual={s} aoFechar={aoFechar} aoSalvar={() => undefined} />;
+  if (tipo === 'mover') return <Mover s={s} aoFechar={aoFechar} aoSalvar={() => undefined} />;
+  return (
+    <Dialogo aberto titulo={`Histórico de cargos: ${s.colaborador.nome}`} aoFechar={aoFechar}>
+      {!s.movimentacoes.length && <p className="apoio">Sem histórico registrado.</p>}
+      {s.movimentacoes.map((m, i) => <div className="pessoa" key={i}><span>{m.cargo}<small>{m.tipo}</small></span><small>{dataBR(m.data_inicio)}{m.data_fim ? ` a ${dataBR(m.data_fim)}` : ' até hoje'}</small></div>)}
+    </Dialogo>
+  );
+}
+
 export function MeusTreinamentos() {
   const { usuario } = useSessao();
   const meu = useDados(async () => (await supabase.from('usuarios').select('colaborador_id').eq('id', usuario!.id).single()).data?.colaborador_id as string | null);
@@ -137,7 +194,7 @@ function Mover({ s, aoFechar, aoSalvar }: { s: SituacaoColaborador; aoFechar: ()
   const cargos = useCargos();
   const [cargo, setCargo] = useState(''); const [data, setData] = useState(''); const [tipo, setTipo] = useState('promocao');
   return (
-    <FormDialogo titulo="Registrar movimentação" rotulo="Registrar" aoFechar={aoFechar} aoEnviar={async () => { await rpc('registrar_movimentacao', { p_colaborador: s.colaborador.id, p_cargo: cargo, p_data: data || null, p_tipo: tipo }); aoSalvar(); }}>
+    <FormDialogo titulo="Alterar cargo" rotulo="Registrar" aoFechar={aoFechar} aoEnviar={async () => { await rpc('registrar_movimentacao', { p_colaborador: s.colaborador.id, p_cargo: cargo, p_data: data || null, p_tipo: tipo }); aoSalvar(); }}>
       <p className="apoio">A pessoa entra na fila de Movimentações para classificar a reciclagem.</p>
       <Campo rotulo="Novo cargo"><select required value={cargo} onChange={(e) => setCargo(e.target.value)}><option value="">Escolha</option>{(cargos.dados ?? []).filter((g) => g.id !== s.colaborador.cargo_id).map((g) => <option key={g.id} value={g.id}>{g.nome}</option>)}</select></Campo>
       <div className="grade-2">

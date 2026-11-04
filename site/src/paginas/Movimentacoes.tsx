@@ -24,7 +24,7 @@ export function Movimentacoes() {
     </button>
   );
   return (
-    <Pagina titulo="Movimentações" apoio="Quem mudou de cargo: classifique, confira a sugestão e confirme. Total e parcial vão para A planejar em Turmas.">
+    <Pagina titulo="Reciclagem" apoio="Quem mudou de cargo: classifique, confira a sugestão e confirme. Total e parcial vão para A planejar em Turmas.">
       {lista.erro && <Mensagem tipo="erro">{lista.erro}</Mensagem>}
       {lista.carregando && !lista.dados && <Carregando />}
       <div className="mestre-detalhe">

@@ -77,8 +77,8 @@ export function Planejar() {
     aoMudar={(a) => setAgendas({ ...agendas, [i.chave]: a })} />;
 
   return (
-    <Pagina titulo="Planejar treinamentos" apoio="Selecione departamentos e cargos para consolidar os treinamentos e enviar as sugestões de agenda.">
-      {msg && <Mensagem tipo="ok" aoFechar={() => setMsg(null)}>{msg} <Link className="link" to="/turmas?etapa=aguardando_instrutor">Ver turmas</Link></Mensagem>}
+    <Pagina titulo="Planejar Treinamentos" apoio="Selecione departamentos e cargos para consolidar os treinamentos e enviar as sugestões de agenda.">
+      {msg && <Mensagem tipo="ok" aoFechar={() => setMsg(null)}>{msg} <Link className="link" to="/formalizar">Ver em Formalizar Convites</Link></Mensagem>}
       {plano.erro && <Mensagem tipo="erro">{plano.erro}</Mensagem>}
 
       <section className="plano-etapa">

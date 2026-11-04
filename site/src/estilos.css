@@ -2349,3 +2349,31 @@ h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
 .doc-obs { height: 56px; }
 .carregando-barra, .carregando-barra::before, .carregando-barra::after { background: var(--menta) !important; background-image: none !important; }
 .carregando-barra { border-radius: 4px; overflow: hidden; position: relative; }
+
+/* Menu e abas no formato do sistema anterior */
+.lateral { flex-basis: 272px; }
+.menu a { font-size: 0.95rem; }
+.menu-divisao { width: 100%; height: 1px; margin: 8px 0; border: 0; background: var(--linha); }
+.cadastro-topo { align-items: flex-end; justify-content: flex-start; }
+.cadastro-topo .botao { margin-left: auto; }
+.cadastro-topo .chips { align-self: center; }
+.matriz-acoes { margin-bottom: 14px; }
+.dialogo .painel { position: static; padding: 0; border: 0; }
+.tabela .linha-acoes { flex-wrap: nowrap; }
+.painel-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; margin-top: 28px; align-items: start; }
+.painel-grade h2 { margin-bottom: 10px; font-size: 1.125rem; font-weight: 600; }
+.situacao { margin-bottom: 16px; }
+.cartoes { margin-bottom: 28px; }
+@media (max-width: 860px) {
+  .lateral { flex-basis: auto; }
+  .menu-divisao { display: none; }
+  .painel-grade { grid-template-columns: minmax(0, 1fr); }
+}
+.menu a svg { flex: none; }
+.lateral { flex-basis: 288px; }
+.tabela th, .tabela td { white-space: normal; overflow-wrap: anywhere; }
+.tabela .linha-acoes { flex-wrap: wrap; gap: 6px; }
+.tabela .botao-pequeno { white-space: nowrap; }
+.celula-nome { display: block; font-weight: 500; }
+.celula-apoio { display: block; font-size: 0.82rem; color: var(--suave); }
+.painel-grade .tabela th, .painel-grade .tabela td { padding-left: 12px; padding-right: 12px; }

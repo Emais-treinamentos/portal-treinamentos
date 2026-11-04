@@ -7,15 +7,13 @@ import { EsqueciSenha } from './paginas/EsqueciSenha';
 import { NovaSenha } from './paginas/NovaSenha';
 import { AcessoBloqueado } from './paginas/AcessoBloqueado';
 import { Inicio } from './paginas/Inicio';
-import { Turmas } from './paginas/Turmas';
+import { Acompanhar, Formalizar, IrParaTurma } from './paginas/Turmas';
 import { Planejar } from './paginas/Planejar';
 import { ListaPresenca } from './paginas/ListaPresenca';
 import { MinhasTurmas } from './paginas/MinhasTurmas';
 import { Colaboradores, MeusTreinamentos } from './paginas/Colaboradores';
 import { Movimentacoes } from './paginas/Movimentacoes';
-import { Matriz } from './paginas/Matriz';
 import { Cadastros } from './paginas/Cadastros';
-import { Indicadores } from './paginas/Indicadores';
 import { Acessos } from './paginas/Acessos';
 import { Envios } from './paginas/Envios';
 
@@ -31,15 +29,15 @@ export function App() {
       <Route path="/nova-senha" element={<NovaSenha />} />
       <Route path="/" element={<ComLogin><Inicio /></ComLogin>} />
       <Route path="/planejar" element={<SoPerfil perfil={['admin']}><Planejar /></SoPerfil>} />
-      <Route path="/turmas" element={<SoPerfil perfil={gestao}><Turmas /></SoPerfil>} />
+      <Route path="/turmas" element={<SoPerfil perfil={gestao}><IrParaTurma /></SoPerfil>} />
+      <Route path="/formalizar" element={<SoPerfil perfil={gestao}><Formalizar /></SoPerfil>} />
+      <Route path="/acompanhar" element={<SoPerfil perfil={gestao}><Acompanhar /></SoPerfil>} />
       <Route path="/minhas-turmas" element={<ComLogin><MinhasTurmas /></ComLogin>} />
-      <Route path="/colaboradores" element={<SoPerfil perfil={[...gestao, 'gestor']}><Colaboradores /></SoPerfil>} />
+      <Route path="/colaboradores" element={<SoPerfil perfil={['gestor']}><Colaboradores /></SoPerfil>} />
       <Route path="/meus-treinamentos" element={<ComLogin><MeusTreinamentos /></ComLogin>} />
-      <Route path="/lista-presenca" element={<SoPerfil perfil={[...gestao, 'gestor']}><ListaPresenca /></SoPerfil>} />
-      <Route path="/movimentacoes" element={<SoPerfil perfil={['admin']}><Movimentacoes /></SoPerfil>} />
-      <Route path="/matriz" element={<SoPerfil perfil={['admin']}><Matriz /></SoPerfil>} />
+      <Route path="/lista-presenca" element={<SoPerfil perfil={gestao}><ListaPresenca /></SoPerfil>} />
+      <Route path="/reciclagem" element={<SoPerfil perfil={['admin']}><Movimentacoes /></SoPerfil>} />
       <Route path="/cadastros" element={<SoPerfil perfil={['admin']}><Cadastros /></SoPerfil>} />
-      <Route path="/indicadores" element={<SoPerfil perfil={gestao}><Indicadores /></SoPerfil>} />
       <Route path="/acessos" element={<SoPerfil perfil={['admin']}><Acessos /></SoPerfil>} />
       <Route path="/envios" element={<SoPerfil perfil={['admin']}><Envios /></SoPerfil>} />
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -7,21 +7,18 @@ export function Topo() {
   const p = usuario?.perfil;
   const admin = p === 'admin';
   const itens: [string, string, NomeIcone, boolean][] = [
-    ['/', 'Início', 'inicio', admin],
-    ['/colaboradores', 'Colaboradores', 'pessoas', admin],
-    ['/colaboradores', 'Minha equipe', 'pessoas', p === 'gestor'],
-    ['/planejar', 'Planejar', 'planejar', admin],
-    ['/turmas', 'Turmas', 'turmas', admin],
-    ['/minhas-turmas', 'Minhas turmas', 'minhas', true],
-    ['/meus-treinamentos', 'Meus treinamentos', 'treinamentos', p !== 'admin' && p !== 'instrutor'],
-    ['/lista-presenca', 'Lista de presença', 'lista', admin || p === 'gestor'],
-    ['/movimentacoes', 'Movimentações', 'movimentacoes', admin],
-    ['/matriz', 'Matriz', 'matriz', admin],
-    ['/indicadores', 'Indicadores', 'indicadores', admin],
+    ['/', 'Dashboard', 'inicio', admin],
     ['/cadastros', 'Cadastros', 'cadastros', admin],
-    ['/acessos', 'Acessos', 'acessos', admin],
-    ['/envios', 'Envios', 'envios', admin],
+    ['/planejar', 'Planejar Treinamentos', 'planejar', admin],
+    ['/formalizar', 'Formalizar Convites', 'turmas', admin],
+    ['/acompanhar', 'Acompanhar Treinamentos', 'minhas', admin],
+    ['/lista-presenca', 'Lista de Presença', 'lista', admin],
+    ['/reciclagem', 'Reciclagem', 'movimentacoes', admin],
+    ['/colaboradores', 'Minha equipe', 'pessoas', p === 'gestor'],
+    ['/minhas-turmas', 'Minhas turmas', 'minhas', !admin],
+    ['/meus-treinamentos', 'Meus treinamentos', 'treinamentos', p === 'gestor' || p === 'colaborador'],
   ];
+  const apoio: [string, string, NomeIcone][] = [['/acessos', 'Acessos', 'acessos'], ['/envios', 'Envios', 'envios']];
   return (
     <aside className="lateral">
       <div className="lateral-marca">
@@ -32,6 +29,8 @@ export function Topo() {
         {itens.filter((i) => i[3]).map(([para, rotulo, icone]) => (
           <NavLink key={rotulo} to={para} end={para === '/'}><Icone nome={icone} />{rotulo}</NavLink>
         ))}
+        {admin && <hr className="menu-divisao" />}
+        {admin && apoio.map(([para, rotulo, icone]) => <NavLink key={rotulo} to={para}><Icone nome={icone} />{rotulo}</NavLink>)}
       </nav>
       {usuario && (
         <div className="lateral-usuario">

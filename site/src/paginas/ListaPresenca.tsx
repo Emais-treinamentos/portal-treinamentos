@@ -32,7 +32,7 @@ export function ListaPresenca() {
   const deps = [...new Set((lista.dados ?? []).map((c) => c.departamento).filter(Boolean))].sort() as string[];
 
   return (
-    <Pagina titulo="Lista de presença" apoio="Selecione um colaborador para ver o documento oficial.">
+    <Pagina titulo="Lista de Presença" apoio="Selecione um colaborador para ver o documento oficial.">
       {lista.erro && <Mensagem tipo="erro">{lista.erro}</Mensagem>}
       <label className="campo campo-busca lista-busca"><span className="sr">Buscar</span><input type="search" placeholder="Buscar por nome ou cargo" value={busca} onChange={(e) => setBusca(e.target.value)} /></label>
       <div className="chips chips-filtro" role="group" aria-label="Colaboradores">
@@ -79,7 +79,7 @@ function Documento({ id, aoVoltar }: { id: string; aoVoltar: () => void }) {
   const feitos = (s?.historico ?? []).filter((h) => h.situacao === 'presente');
   const abertos = (s?.itens ?? []).filter((i) => !['realizado', 'dispensado'].includes(i.situacao));
   return (
-    <Pagina titulo={s?.colaborador.nome ?? 'Lista de presença'} apoio="Documento oficial de treinamentos do colaborador.">
+    <Pagina titulo={s?.colaborador.nome ?? 'Lista de Presença'} apoio="Documento oficial de treinamentos do colaborador.">
       {d.erro && <Mensagem tipo="erro">{d.erro}</Mensagem>}
       {erro && <Mensagem tipo="erro">{erro}</Mensagem>}
       <div className="linha-acoes doc-acoes">
