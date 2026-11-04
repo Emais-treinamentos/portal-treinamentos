@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env.local
+.env.*.local
+.DS_Store
+*.log
+
+# Arquivos de carga e exportações com dados pessoais nunca entram no repositório
+carga/
+*.xlsx
+*.csv
+*.tsbuildinfo

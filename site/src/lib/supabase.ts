@@ -1,0 +1,28 @@
+import { createClient } from '@supabase/supabase-js';
+
+const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const chave = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+
+if (!url || !chave) {
+  throw new Error('Faltam VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY. Veja site/.env.exemplo.');
+}
+
+export const supabase = createClient(url, chave, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+});
+
+// Endereço base do site (ex.: https://emais-treinamentos.github.io/portal-treinamentos/), usado nos links enviados por e-mail.
+export const enderecoDoSite = new URL(import.meta.env.BASE_URL, window.location.origin).toString();
+
+// Traduz as mensagens de erro mais comuns do Supabase Auth.
+export function mensagemDeErro(erro: { message?: string; status?: number } | null | undefined): string {
+  const m = erro?.message ?? '';
+  if (/invalid login credentials/i.test(m)) return 'E-mail ou senha incorretos.';
+  if (/email not confirmed/i.test(m)) return 'Este e-mail ainda não foi confirmado. Procure o link de confirmação na sua caixa de entrada.';
+  if (/rate limit|too many/i.test(m) || erro?.status === 429) return 'Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo.';
+  if (/password should be at least/i.test(m)) return 'A senha precisa ter pelo menos 8 caracteres.';
+  if (/same.*password|different from the old/i.test(m)) return 'A nova senha precisa ser diferente da atual.';
+  if (/weak/i.test(m)) return 'Senha fraca. Use letras e números, com pelo menos 8 caracteres.';
+  if (/fetch|network/i.test(m)) return 'Sem conexão com o servidor. Confira a internet e tente de novo.';
+  return m ? `Não foi possível concluir: ${m}` : 'Não foi possível concluir. Tente de novo.';
+}
