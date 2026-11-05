@@ -11,8 +11,8 @@ type Ind = { verde: number; amarelo: number; vermelho: number; obrigatorios: num
 type TurmaResumo = { id: string; treinamento: string; status: string; etapa: string; data: string | null; hora: string | null };
 type PessoaResumo = { cargo: string | null; ativo: boolean; pendentes: number };
 
-const acoes: Record<string, string> = { solicitacao: 'Decidir', replanejar: 'Replanejar', envio: 'Ver', presenca: 'Ver turma', formalizar: 'Formalizar', movimentacao: 'Classificar', sem_resposta: 'Ver turma' };
-const ordem = ['solicitacao', 'replanejar', 'envio', 'presenca', 'formalizar', 'movimentacao'];
+const acoes: Record<string, string> = { assinatura: 'Baixar', solicitacao: 'Decidir', replanejar: 'Replanejar', envio: 'Ver', presenca: 'Ver turma', formalizar: 'Formalizar', movimentacao: 'Classificar', sem_resposta: 'Ver turma' };
+const ordem = ['assinatura', 'solicitacao', 'replanejar', 'envio', 'presenca', 'formalizar', 'movimentacao'];
 
 export function Inicio() {
   const { usuario } = useSessao();
@@ -24,6 +24,7 @@ export function Inicio() {
 
 function destino(i: ItemFila) {
   if (i.grupo === 'envio') return '/envios';
+  if (i.grupo === 'assinatura') return `/lista-presenca?colaborador=${i.colaborador_id}`;
   if (i.turma_id) return `/turmas?turma=${i.turma_id}`;
   if (i.grupo === 'movimentacao') return `/reciclagem?colaborador=${i.colaborador_id}`;
   return '/turmas?etapa=a_planejar';
@@ -165,7 +166,7 @@ function Tarefa({ i }: { i: ItemFila }) {
   const icone: NomeIcone = i.grupo === 'envio' ? 'envios' : 'turmas';
   return (
     <div className="cartao-pessoa">
-      {i.grupo === 'movimentacao' ? <Rosto nome={titulo} /> : <Rosto><Icone nome={icone} /></Rosto>}
+      {i.grupo === 'movimentacao' || i.grupo === 'assinatura' ? <Rosto nome={titulo} /> : <Rosto><Icone nome={icone} /></Rosto>}
       <span className="cartao-pessoa-texto">
         <strong>{titulo}{i.urgente && <span className="selo-urgente">Urgente</span>}</strong>
         <small>{texto}</small>

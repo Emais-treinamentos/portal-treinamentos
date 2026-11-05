@@ -1,12 +1,16 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Pagina, Mensagem } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { SeloSituacao } from '../componentes/Pecas';
 import { cargaTexto, dataBR, rpc, textoErro, useDados, type SituacaoColaborador } from '../lib/api';
-import { gerarF109, gerarGrade, gerarTermoDispensa } from '../lib/documentos';
+import { baixarDocumentoAssinatura, gerarF109, gerarGrade, gerarTermoDispensa, type DocumentoAssinatura } from '../lib/documentos';
 
 type Linha = { id: string; nome: string; cargo: string | null; departamento: string | null; ativo: boolean; data_referencia: string | null; total: number; realizados: number; pendentes: number; motivo: string };
 
+type Assinatura = { id: string; colaborador_id: string; tipo: DocumentoAssinatura['tipo']; status: string; solicitado_em: string; assinado_em: string | null; baixado_em: string | null };
+const useAssinaturas = () => useDados(() => rpc<Assinatura[]>('assinaturas_lista'));
+const nomeDoc = { termo_dispensa: 'Termo de Dispensa', lista_presenca: 'Lista de Presença (F.109)' };
 const JANELA_ATIVOS = 30;
 const diasDesde = (d: string | null) => (d ? Math.floor((Date.now() - new Date(`${d.slice(0, 10)}T00:00:00`).getTime()) / 86400000) : null);
 const recente = (d: string | null) => { const n = diasDesde(d); return n !== null && n >= 0 && n <= JANELA_ATIVOS; };
@@ -17,9 +21,17 @@ export function ListaPresenca() {
   const [busca, setBusca] = useState('');
   const [periodo, setPeriodo] = useState('');
   const [dep, setDep] = useState('');
-  const [sel, setSel] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  const [sel, setSel] = useState<string | null>(params.get('colaborador'));
+  const assinaturas = useAssinaturas();
 
-  if (sel) return <Documento id={sel} aoVoltar={() => setSel(null)} />;
+  if (sel) return <Documento id={sel} aoVoltar={() => { setSel(null); void assinaturas.recarregar(); }} />;
+
+  const situacaoAssinatura = (id: string) => {
+    const a = (assinaturas.dados ?? []).filter((x) => x.colaborador_id === id);
+    if (a.some((x) => x.status === 'pendente')) return 'Aguardando';
+    return a.some((x) => x.status === 'assinado') ? 'Assinado' : '';
+  };
 
   const q = busca.trim().toLowerCase();
   const pessoas = (lista.dados ?? []).filter((c) => c.ativo && (!q || `${c.nome} ${c.cargo ?? ''}`.toLowerCase().includes(q)));
@@ -49,9 +61,9 @@ export function ListaPresenca() {
       {lista.dados && (
         <div className="tabela-rolagem">
           <table className="tabela">
-            <thead><tr><th>Colaborador</th><th>Cargo</th><th>Total</th><th>Realizados</th><th>Pendentes</th><th>Documento</th></tr></thead>
+            <thead><tr><th>Colaborador</th><th>Cargo</th><th>Total</th><th>Realizados</th><th>Pendentes</th><th>Assinatura</th><th>Documento</th></tr></thead>
             <tbody>
-              {!linhas.length && <tr><td colSpan={6}>{aba === 'ativos' ? `Nenhum colaborador com admissão ou movimentação nos últimos ${JANELA_ATIVOS} dias.` : 'Nenhum colaborador no histórico.'}</td></tr>}
+              {!linhas.length && <tr><td colSpan={7}>{aba === 'ativos' ? `Nenhum colaborador com admissão ou movimentação nos últimos ${JANELA_ATIVOS} dias.` : 'Nenhum colaborador no histórico.'}</td></tr>}
               {linhas.map((c) => (
                 <tr key={c.id}>
                   <td>{c.nome}</td>
@@ -59,6 +71,7 @@ export function ListaPresenca() {
                   <td>{c.total}</td>
                   <td>{c.realizados}</td>
                   <td>{c.motivo === 'Termo de Dispensa emitido' ? 'Termo emitido' : c.pendentes}</td>
+                  <td>{situacaoAssinatura(c.id)}</td>
                   <td><button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setSel(c.id)}>Ver</button></td>
                 </tr>
               ))}
@@ -70,8 +83,57 @@ export function ListaPresenca() {
   );
 }
 
+function BlocoAssinatura({ s, dispensa, emAberto, docs, aoMudar, aoAvisar, aoErro }: { s: SituacaoColaborador; dispensa: boolean; emAberto: boolean; docs: Assinatura[]; aoMudar: () => void; aoAvisar: (m: string) => void; aoErro: (m: string) => void }) {
+  const tipo: DocumentoAssinatura['tipo'] = dispensa ? 'termo_dispensa' : 'lista_presenca';
+  const atual = docs.find((x) => x.status === 'pendente' && x.tipo === tipo);
+  const assinados = docs.filter((x) => x.status === 'assinado');
+  async function enviar() {
+    try {
+      const r = await rpc<{ tem_email: boolean }>('solicitar_assinatura', { p_colaborador: s.colaborador.id, p_tipo: tipo });
+      aoAvisar(r.tem_email ? 'Enviado para assinatura. O aviso por e-mail entrou na fila de envio, e o documento já aparece no Meu Perfil do colaborador.' : 'Enviado para assinatura. Este colaborador não tem e-mail cadastrado: avise que o documento está no Meu Perfil dele.');
+      aoMudar();
+    } catch (e) { aoErro(textoErro(e)); }
+  }
+  async function baixar(x: Assinatura) {
+    try {
+      await baixarDocumentoAssinatura(await rpc<DocumentoAssinatura>('documento_assinatura', { p_id: x.id }));
+      await rpc('marcar_documento_baixado', { p_id: x.id });
+      aoMudar();
+    } catch (e) { aoErro(textoErro(e)); }
+  }
+  async function cancelar(x: Assinatura) {
+    try { await rpc('cancelar_assinatura', { p_id: x.id }); aoMudar(); } catch (e) { aoErro(textoErro(e)); }
+  }
+  const jaAssinadoIgual = assinados.some((x) => x.tipo === tipo) && !emAberto && dispensa;
+  return (
+    <section className="doc-pendencias">
+      <h2>Assinatura</h2>
+      {assinados.map((x) => (
+        <div className="pessoa" key={x.id}>
+          <span>{nomeDoc[x.tipo]}<small>Assinado em {dataBR(x.assinado_em)}{x.baixado_em ? `, baixado em ${dataBR(x.baixado_em)}` : ''}</small></span>
+          <button className="botao botao-pequeno" type="button" onClick={() => void baixar(x)}>Baixar PDF assinado</button>
+        </div>
+      ))}
+      {atual && (
+        <div className="pessoa">
+          <span>{nomeDoc[tipo]}<small>Aguardando assinatura desde {dataBR(atual.solicitado_em)}</small></span>
+          <button className="botao botao-discreto botao-pequeno" type="button" onClick={() => void cancelar(atual)}>Cancelar pedido</button>
+        </div>
+      )}
+      {!atual && !jaAssinadoIgual && (
+        <div className="pessoa">
+          <span>{nomeDoc[tipo]}<small>{!dispensa && emAberto ? 'A lista vai para assinatura quando todos os treinamentos forem concluídos.' : 'Pronto para enviar ao colaborador.'}</small></span>
+          <button className="botao botao-secundario botao-pequeno" type="button" disabled={!dispensa && emAberto} onClick={() => void enviar()}>Enviar para assinatura</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function Documento({ id, aoVoltar }: { id: string; aoVoltar: () => void }) {
   const d = useDados(() => rpc<SituacaoColaborador>('situacao_colaborador', { p_colaborador: id }), [id]);
+  const assinaturas = useAssinaturas();
+  const [msg, setMsg] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const s = d.dados;
   const doc = async (f: () => Promise<void>) => { setErro(null); try { await f(); } catch (e) { setErro(textoErro(e)); } };
@@ -88,7 +150,9 @@ function Documento({ id, aoVoltar }: { id: string; aoVoltar: () => void }) {
         {s && <button className="botao botao-secundario" type="button" onClick={() => void doc(() => gerarGrade(s))}>Grade de treinamentos</button>}
         {s && dispensa && <button className="botao botao-secundario" type="button" onClick={() => void doc(() => gerarTermoDispensa(s))}>Termo de Dispensa</button>}
       </div>
+      {msg && <Mensagem tipo="ok" aoFechar={() => setMsg(null)}>{msg}</Mensagem>}
       {!s && !d.erro && <Carregando />}
+      {s && <BlocoAssinatura s={s} dispensa={dispensa} emAberto={abertos.length > 0} docs={(assinaturas.dados ?? []).filter((x) => x.colaborador_id === id)} aoMudar={() => void assinaturas.recarregar()} aoAvisar={setMsg} aoErro={setErro} />}
       {s && abertos.length > 0 && (
         <section className="doc-pendencias">
           <h2>Ainda em aberto</h2>

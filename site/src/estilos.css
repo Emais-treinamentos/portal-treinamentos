@@ -2439,3 +2439,9 @@ h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
   .lateral { flex-basis: auto; }
   .cal-evento { display: block; -webkit-line-clamp: unset; }
 }
+
+/* Assinatura */
+.assinatura-campo { display: flex; flex-direction: column; gap: 6px; }
+.assinatura-campo canvas { display: block; width: 100%; aspect-ratio: 3 / 1; background: #fff; border: 1px solid #a9bab5; border-radius: 12px; touch-action: none; cursor: crosshair; }
+.assinatura-rodape { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.assinatura-rodape small { color: var(--suave); }

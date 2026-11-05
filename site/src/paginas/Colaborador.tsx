@@ -4,12 +4,16 @@ import { Pagina, Mensagem } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Dialogo } from '../componentes/Dialogo';
 import { Calendario, type EventoCal } from '../componentes/Calendario';
+import { CampoAssinatura } from '../componentes/CampoAssinatura';
 import { Campo, FormDialogo, SeloSituacao } from '../componentes/Pecas';
-import { cargaTexto, dataBR, hora, horaFim, nomesSituacao, rpc, useDados, type SituacaoColaborador } from '../lib/api';
+import { baixarDocumentoAssinatura, type DocumentoAssinatura } from '../lib/documentos';
+import { cargaTexto, dataBR, hora, horaFim, nomesSituacao, rpc, textoErro, useDados, type SituacaoColaborador } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import { useSessao } from '../lib/sessao';
 
 type TurmaCal = { id: string; treinamento: string; status: string; etapa: string; data: string; hora: string | null; carga_minutos: number; sala: string | null; instrutor: string; minha_situacao: string; participantes: string[] };
+type MinhaAssinatura = { id: string; tipo: DocumentoAssinatura['tipo']; status: string; solicitado_em: string; assinado_em: string | null };
+const nomeDocumento = { termo_dispensa: 'Termo de Dispensa', lista_presenca: 'Lista de Presença (F.109)' };
 type Pendente = { turma_id: string; treinamento: string; data: string | null };
 
 const usePendentes = () => useDados(() => rpc<Pendente[]>('minhas_avaliacoes'));
@@ -17,6 +21,7 @@ const usePendentes = () => useDados(() => rpc<Pendente[]>('minhas_avaliacoes'));
 export function MeuCalendario() {
   const lista = useDados(() => rpc<TurmaCal[]>('meu_calendario'));
   const pend = usePendentes();
+  const docs = useDados(() => rpc<MinhaAssinatura[]>('minhas_assinaturas'));
   const [sel, setSel] = useState<string | null>(null);
   const t = lista.dados?.find((x) => x.id === sel);
   const n = pend.dados?.length ?? 0;
@@ -25,6 +30,7 @@ export function MeuCalendario() {
     <Pagina titulo="Meu Calendário" apoio="Seus treinamentos do mês. Clique em um deles para ver instrutor, sala e participantes.">
       {lista.erro && <Mensagem tipo="erro">{lista.erro}</Mensagem>}
       {n > 0 && <div className="aviso-avaliar"><span>{n === 1 ? 'Você tem 1 treinamento para avaliar.' : `Você tem ${n} treinamentos para avaliar.`}</span><Link className="botao botao-pequeno" to="/meu-perfil">Avaliar</Link></div>}
+      {docs.dados?.some((x) => x.status === 'pendente') && <div className="aviso-avaliar"><span>Você tem documento para assinar.</span><Link className="botao botao-pequeno" to="/meu-perfil">Assinar</Link></div>}
       {lista.carregando && !lista.dados && <Carregando />}
       {lista.dados && <Calendario eventos={eventos} aoAbrir={setSel} legenda={[['confirmado', 'Agendado'], ['feito', 'Já ocorreu']]} />}
       {t && (
@@ -63,6 +69,9 @@ export function MeuPerfil() {
 function Perfil({ id }: { id: string }) {
   const d = useDados(() => rpc<SituacaoColaborador>('situacao_colaborador', { p_colaborador: id }), [id]);
   const pend = usePendentes();
+  const docs = useDados(() => rpc<MinhaAssinatura[]>('minhas_assinaturas'));
+  const [assinar, setAssinar] = useState<MinhaAssinatura | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   const [avaliar, setAvaliar] = useState<Pendente | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const s = d.dados;
@@ -72,6 +81,13 @@ function Perfil({ id }: { id: string }) {
   return (
     <>
       {msg && <Mensagem tipo="ok" aoFechar={() => setMsg(null)}>{msg}</Mensagem>}
+      {erro && <Mensagem tipo="erro" aoFechar={() => setErro(null)}>{erro}</Mensagem>}
+      {(docs.dados ?? []).filter((x) => x.status === 'pendente').map((x) => (
+        <div className="aviso-avaliar" key={x.id}>
+          <span><strong>{nomeDocumento[x.tipo]} aguardando sua assinatura</strong><small>Enviado por Gente e Gestão em {dataBR(x.solicitado_em)}. Leia o documento e assine aqui mesmo.</small></span>
+          <button className="botao botao-pequeno" type="button" onClick={() => setAssinar(x)}>Assinar</button>
+        </div>
+      ))}
       {(pend.dados ?? []).map((p) => (
         <div className="aviso-avaliar" key={p.turma_id}>
           <span><strong>Como foi o treinamento de {p.treinamento}?</strong><small>Realizado em {dataBR(p.data)}. Leva menos de 1 minuto e sua resposta é confidencial.</small></span>
@@ -104,8 +120,34 @@ function Perfil({ id }: { id: string }) {
           <div>{s.movimentacoes.map((m, i) => <div className="pessoa" key={i}><span>{m.cargo}<small>{m.tipo}</small></span><small>{dataBR(m.data_inicio)}{m.data_fim ? ` a ${dataBR(m.data_fim)}` : ' até hoje'}</small></div>)}</div>
         </section>
       )}
+      {(docs.dados ?? []).some((x) => x.status === 'assinado') && (
+        <section className="plano-etapa">
+          <h2>Documentos assinados</h2>
+          <div>{(docs.dados ?? []).filter((x) => x.status === 'assinado').map((x) => (
+            <div className="pessoa" key={x.id}><span>{nomeDocumento[x.tipo]}<small>Assinado em {dataBR(x.assinado_em)}</small></span>
+              <button className="botao botao-secundario botao-pequeno" type="button" onClick={() => void abrirDocumento(x.id).catch((e) => setErro(textoErro(e)))}>Baixar cópia</button></div>
+          ))}</div>
+        </section>
+      )}
+      {assinar && <FormAssinatura d={assinar} aoFechar={() => setAssinar(null)} aoAssinar={() => { setMsg('Documento assinado. Gente e Gestão foi avisado.'); void docs.recarregar(); }} />}
       {avaliar && <FormAvaliacao p={avaliar} aoFechar={() => setAvaliar(null)} aoEnviar={() => { setMsg('Avaliação enviada de forma confidencial. Obrigado.'); void pend.recarregar(); }} />}
     </>
+  );
+}
+
+const abrirDocumento = async (id: string) => baixarDocumentoAssinatura(await rpc<DocumentoAssinatura>('documento_assinatura', { p_id: id }));
+
+function FormAssinatura({ d, aoFechar, aoAssinar }: { d: MinhaAssinatura; aoFechar: () => void; aoAssinar: () => void }) {
+  const [imagem, setImagem] = useState<string | null>(null);
+  const [li, setLi] = useState(false);
+  return (
+    <FormDialogo titulo={`Assinar: ${nomeDocumento[d.tipo]}`} rotulo="Assinar documento" desabilitar={!imagem || !li} aoFechar={aoFechar}
+      aoEnviar={async () => { await rpc('assinar_documento', { p_id: d.id, p_imagem: imagem }); aoAssinar(); }}>
+      <button className="botao botao-secundario" type="button" onClick={() => void abrirDocumento(d.id)}>Abrir documento em PDF</button>
+      <CampoAssinatura aoMudar={setImagem} />
+      <label className="opcao opcao-termo"><input type="checkbox" checked={li} onChange={(e) => setLi(e.target.checked)} />Li o documento e concordo em assiná-lo eletronicamente.</label>
+      <p className="apoio">Depois de assinado, o documento não pode ser alterado. Registramos seu acesso, a data, a hora e o IP.</p>
+    </FormDialogo>
   );
 }
 

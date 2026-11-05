@@ -143,6 +143,40 @@ select teste.ok('painel e fila respondem', (select count(*) from fila_inicio()) 
 select teste.ok('presença gera código único por pessoa', (select count(distinct codigo_presenca) = count(*) and count(*) > 0 from turma_participantes where situacao='presente'));
 select teste.ok('ausente fica sem código', not exists (select 1 from turma_participantes where situacao <> 'presente' and codigo_presenca is not null));
 select teste.ok('resposta não tem coluna de pessoa nem data', not exists (select 1 from information_schema.columns where table_name='avaliacao_respostas' and (column_name like '%colaborador%' or data_type like 'timestamp%' or column_name like '%usuario%')));
+
+-- Assinatura eletrônica
+select teste.falha('lista não vai para assinatura com treinamento em aberto', $q$select solicitar_assinatura((select id from colaboradores where nome='Clara Teste'),'lista_presenca')$q$);
+select teste.falha('termo exige dispensa', $q$select solicitar_assinatura((select id from colaboradores where nome='Clara Teste'),'termo_dispensa')$q$);
+insert into ctx select 'doc', (solicitar_assinatura((select id from colaboradores where nome='Paula Teste'),'termo_dispensa')->>'id')::uuid;
+select teste.falha('não envia o mesmo termo duas vezes', $q$select solicitar_assinatura((select id from colaboradores where nome='Paula Teste'),'termo_dispensa')$q$);
+reset role;
+insert into auth.users select gen_random_uuid(), 'paula.login@example.com';
+insert into usuarios (id, nome, email, perfil, colaborador_id) select u.id, 'Paula Teste', u.email, 'colaborador', (select id from colaboradores where nome='Paula Teste') from auth.users u where u.email='paula.login@example.com';
+select teste.como('colaborador.teste@example.com');
+select teste.falha('outra pessoa não assina', $q$select assinar_documento((select v from ctx where k='doc'),'data:image/png;base64,AAAA')$q$);
+select teste.falha('outra pessoa não abre o documento', $q$select documento_assinatura((select v from ctx where k='doc'))$q$);
+select teste.como('paula.login@example.com');
+select teste.falha('assinatura inválida é recusada', $q$select assinar_documento((select v from ctx where k='doc'),'qualquer coisa')$q$);
+select assinar_documento((select v from ctx where k='doc'),'data:image/png;base64,AAAA');
+select teste.falha('não assina duas vezes', $q$select assinar_documento((select v from ctx where k='doc'),'data:image/png;base64,AAAA')$q$);
+reset role;
+select teste.ok('assinatura guarda data, nome e e-mail', (select assinado_em is not null and assinatura_nome='Paula Teste' and assinatura_email='paula.login@example.com' and length(hash)=64 from documentos_assinatura where id=(select v from ctx where k='doc')));
+select teste.ok('Gente e Gestão recebe o aviso', exists (select 1 from notificacoes where tipo='assinatura_concluida'));
+select teste.falha('documento assinado não muda', $q$update documentos_assinatura set conteudo='{}' where id=(select v from ctx where k='doc')$q$);
+select teste.falha('documento assinado não é apagado', $q$delete from documentos_assinatura where id=(select v from ctx where k='doc')$q$);
+select teste.como('gestao.teste@example.com');
+select teste.ok('assinado aparece na fila', exists (select 1 from fila_inicio() where grupo='assinatura'));
+select marcar_documento_baixado((select v from ctx where k='doc'));
+select teste.ok('baixado sai da fila', not exists (select 1 from fila_inicio() where grupo='assinatura'));
+reset role;
+insert into turma_participantes (turma_id, colaborador_id, situacao, cargo_na_data_id)
+select (select v from ctx where k='t2'), id, 'presente', cargo_id from colaboradores where nome='Vera Teste' on conflict (turma_id, colaborador_id) do update set situacao='presente';
+delete from matriz_vinculos v where v.cargo_id=(select cargo_id from colaboradores where nome='Vera Teste') and v.treinamento_id not in (select t.treinamento_id from turmas t where t.id=(select v from ctx where k='t2'));
+select app.solicitar_lista_se_concluida(id) from colaboradores where nome='Vera Teste';
+select teste.ok('grade concluída vai sozinha para assinatura', exists (select 1 from documentos_assinatura d join colaboradores c on c.id=d.colaborador_id where c.nome='Vera Teste' and d.tipo='lista_presenca' and d.status='pendente'));
+select app.solicitar_lista_se_concluida(id) from colaboradores where nome='Vera Teste';
+select teste.ok('não repete a mesma lista', (select count(*) from documentos_assinatura d join colaboradores c on c.id=d.colaborador_id where c.nome='Vera Teste' and d.tipo='lista_presenca') = 1);
+select teste.como('gestao.teste@example.com');
 reset role;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);

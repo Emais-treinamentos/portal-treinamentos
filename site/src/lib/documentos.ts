@@ -18,7 +18,15 @@ async function carregarLogo(): Promise<HTMLImageElement | null> {
 const nomeArquivo = (n: string) => n.replace(/\s+/g, '_');
 
 // F.109, Rev. 01: lista de treinamentos que a pessoa fez.
-export async function gerarF109(s: SituacaoColaborador) {
+export type Assinado = { assinado_em: string; assinatura_imagem: string; assinatura_nome: string | null; assinatura_email: string | null; assinatura_ip: string | null; hash: string };
+const quando = (d: string) => new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' });
+const dataAssinada = (d: string) => new Date(d).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+function carimbo(pdf: jsPDF, a: Assinado, x: number, y: number, w: number) {
+  const t = `Assinado eletronicamente por ${a.assinatura_nome ?? ''}${a.assinatura_email ? ` (${a.assinatura_email})` : ''} em ${quando(a.assinado_em)}, horário de Brasília.${a.assinatura_ip ? ` IP ${a.assinatura_ip}.` : ''} Código de verificação: ${a.hash.slice(0, 16).toUpperCase()}.`;
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7); pdf.setTextColor(80, 80, 80); pdf.text(pdf.splitTextToSize(t, w) as string[], x, y); pdf.setTextColor(0, 0, 0);
+}
+
+export async function gerarF109(s: SituacaoColaborador, assinado?: Assinado) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const logo = await carregarLogo();
   const m = 10; const W = pdf.internal.pageSize.getWidth() - m * 2; const H = pdf.internal.pageSize.getHeight() - m;
@@ -65,13 +73,14 @@ export async function gerarF109(s: SituacaoColaborador) {
   y += 6;
   pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9); pdf.text(`Carga Horária Total: ${cargaTexto(feitos.reduce((a, d) => a + d.carga_minutos, 0))}`, m + W - 2, y, { align: 'right' }); y += 8;
   if (y + 35 > H) { pdf.addPage(); y = m; }
-  pdf.rect(m, y, W, 35); pdf.text('Declaro que participei dos treinamentos acima descritos.', m + 4, y + 8);
+  pdf.rect(m, y, W, assinado ? 40 : 35); pdf.text('Declaro que participei dos treinamentos acima descritos.', m + 4, y + 8);
   const fy = y + 18;
-  [{ r: 'Nome do Colaborador', v: c.nome, x: m + 4, w: 72 }, { r: 'Assinatura', v: '', x: m + 82, w: 64 }, { r: 'Data', v: '____/____/________', x: m + 152, w: W - 156 }].forEach((f) => {
+  [{ r: 'Nome do Colaborador', v: c.nome, x: m + 4, w: 72 }, { r: 'Assinatura', v: '', x: m + 82, w: 64 }, { r: 'Data', v: assinado ? dataAssinada(assinado.assinado_em) : '____/____/________', x: m + 152, w: W - 156 }].forEach((f) => {
     pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8); pdf.setTextColor(102, 102, 102); pdf.text(f.r, f.x, fy); pdf.setTextColor(0, 0, 0); pdf.line(f.x, fy + 8, f.x + f.w, fy + 8);
     if (f.v) pdf.text(f.v, f.x, fy + 6, { maxWidth: f.w });
   });
-  y += 40;
+  if (assinado) { pdf.addImage(assinado.assinatura_imagem, 'PNG', m + 97, fy - 2.5, 30, 10); carimbo(pdf, assinado, m + 4, fy + 13, W - 8); }
+  y += assinado ? 45 : 40;
   if (y + 70 > H) { pdf.addPage(); y = m; }
   pdf.rect(m, y, W, 70); pdf.setFillColor(...cinza); pdf.rect(m + 4, y + 4, W - 8, 9, 'F');
   pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10); pdf.text('Avaliação de Eficácia', m + W / 2, y + 10.5, { align: 'center' });
@@ -80,7 +89,7 @@ export async function gerarF109(s: SituacaoColaborador) {
   [['Data da Avaliação', 8], ['Avaliador', 8], ['Resultado', 8], ['Observações', 21]].forEach(([r, h]) => {
     celula(r as string, m + 4, ry, 50, h as number, { fill: cinza, bold: true, size: 8 }); celula('', m + 54, ry, W - 58, h as number); ry += h as number;
   });
-  pdf.save(`F109_${nomeArquivo(c.nome)}.pdf`);
+  pdf.save(`F109_${nomeArquivo(c.nome)}${assinado ? '_assinado' : ''}.pdf`);
 }
 
 // Grade de treinamentos: turmas da pessoa, sem canceladas ou recusadas.
@@ -147,7 +156,7 @@ const TEXTOS_TERMO = {
 };
 
 // Termo de Dispensa, com os textos do modelo oficial. Motivos marcados à caneta na assinatura.
-export async function gerarTermoDispensa(s: SituacaoColaborador) {
+export async function gerarTermoDispensa(s: SituacaoColaborador, assinado?: Assinado) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const logo = await carregarLogo();
   const pw = pdf.internal.pageSize.getWidth(); const ph = pdf.internal.pageSize.getHeight(); const m = 20; const W = pw - m * 2; let y = m;
@@ -167,7 +176,16 @@ export async function gerarTermoDispensa(s: SituacaoColaborador) {
   if (!feitos.length) texto('Nenhum treinamento confirmado registrado.', 4);
   feitos.forEach((f) => texto(`${f.treinamento}: ${dataBR(f.data)}`, 2));
   y += 3; garantir(60); secao('5. Declaração'); texto(TEXTOS_TERMO.d1); texto(TEXTOS_TERMO.d2, 8);
-  garantir(40); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10); pdf.text('Local e Data: _______________________, ____/____/______', m, y); y += 22;
+  garantir(assinado ? 52 : 40); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10); pdf.text(assinado ? `Data: ${dataAssinada(assinado.assinado_em)}` : 'Local e Data: _______________________, ____/____/______', m, y); y += 22;
+  if (assinado) pdf.addImage(assinado.assinatura_imagem, 'PNG', (pw - 48) / 2, y - 16, 48, 16);
   pdf.setLineWidth(0.3); pdf.line((pw - 80) / 2, y, (pw + 80) / 2, y); y += 5; pdf.text('Assinatura do Colaborador', pw / 2, y, { align: 'center' });
-  pdf.save(`Termo_Dispensa_${nomeArquivo(s.colaborador.nome)}.pdf`);
+  if (assinado) { y += 6; carimbo(pdf, assinado, m, y, W); }
+  pdf.save(`Termo_Dispensa_${nomeArquivo(s.colaborador.nome)}${assinado ? '_assinado' : ''}.pdf`);
+}
+
+// Abre o documento congelado na solicitação, com ou sem a assinatura.
+export type DocumentoAssinatura = Assinado & { id: string; tipo: 'termo_dispensa' | 'lista_presenca'; status: string; conteudo: SituacaoColaborador };
+export function baixarDocumentoAssinatura(d: DocumentoAssinatura) {
+  const a = d.status === 'assinado' ? d : undefined;
+  return d.tipo === 'termo_dispensa' ? gerarTermoDispensa(d.conteudo, a) : gerarF109(d.conteudo, a);
 }

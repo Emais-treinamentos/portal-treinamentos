@@ -4,9 +4,12 @@ import { rpc, useDados } from '../lib/api';
 import { Icone, Rosto, type NomeIcone } from './Pecas';
 
 function AvisoAvaliacoes() {
-  const d = useDados(() => rpc<unknown[]>('minhas_avaliacoes'));
-  const n = d.dados?.length ?? 0;
-  return n ? <span className="contador" aria-label={`${n} avaliação(ões) pendente(s)`}>{n}</span> : null;
+  const d = useDados(async () => {
+    const [av, as] = await Promise.all([rpc<unknown[]>('minhas_avaliacoes'), rpc<{ status: string }[]>('minhas_assinaturas')]);
+    return av.length + as.filter((x) => x.status === 'pendente').length;
+  });
+  const n = d.dados ?? 0;
+  return n ? <span className="contador" aria-label={`${n} pendência(s)`}>{n}</span> : null;
 }
 
 export function Topo() {
