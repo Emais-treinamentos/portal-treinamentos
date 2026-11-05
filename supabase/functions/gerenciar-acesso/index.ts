@@ -1,4 +1,4 @@
-// Cria acessos e gera o link de primeiro acesso ou de nova senha. Só Gente e Gestão chama.
+// Cria e edita acessos e gera o link de primeiro acesso ou de nova senha. Só Gente e Gestão chama.
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
 const cabecalhos = {
@@ -45,6 +45,41 @@ Deno.serve(async (req) => {
     if (perfil === 'gestor') await servico.from('usuarios_departamentos').insert(departamentos.map((d) => ({ usuario_id: criado.user.id, departamento_id: d })));
     const { data: link } = await servico.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo } });
     return responder(200, { link: link?.properties?.action_link ?? null });
+  }
+  if (c.acao === 'editar') {
+    const id = String(c.usuario_id ?? '');
+    const nome = String(c.nome ?? '').trim();
+    const email = String(c.email ?? '').trim().toLowerCase();
+    const perfil = String(c.perfil ?? '');
+    const departamentos = Array.isArray(c.departamentos) ? c.departamentos.map(String) : [];
+    if (nome.length < 2) return erro(400, 'Informe o nome');
+    if (!EMAIL.test(email)) return erro(400, 'E-mail inválido');
+    if (!PERFIS.includes(perfil)) return erro(400, 'Perfil inválido');
+    if (perfil === 'gestor' && !departamentos.length) return erro(400, 'Escolha ao menos um departamento');
+    if (id === quem.user.id && perfil !== 'admin') return erro(400, 'Você não pode tirar o seu próprio perfil de Gente e Gestão');
+    const { data: atual } = await servico.from('usuarios').select('email').eq('id', id).maybeSingle();
+    if (!atual) return erro(404, 'Acesso não encontrado');
+    const emailAnterior = atual.email as string;
+    const trocouEmail = emailAnterior !== email;
+    if (trocouEmail) {
+      const { data: outro } = await servico.from('usuarios').select('id').eq('email', email).neq('id', id).maybeSingle();
+      if (outro) return erro(400, 'Este e-mail já tem acesso');
+      const { error } = await servico.auth.admin.updateUserById(id, { email, email_confirm: true });
+      if (error) return erro(400, /already/i.test(error.message) ? 'Este e-mail já tem acesso' : 'Não foi possível alterar o e-mail');
+    }
+    const { error: e2 } = await servico.from('usuarios').update({ nome, email, perfil, colaborador_id: c.colaborador_id || null }).eq('id', id);
+    if (e2) {
+      if (trocouEmail) await servico.auth.admin.updateUserById(id, { email: emailAnterior, email_confirm: true });
+      return erro(400, 'Não foi possível alterar o acesso');
+    }
+    if (trocouEmail) {
+      // O instrutor é reconhecido pelo e-mail: as turmas e os avisos pendentes acompanham a troca.
+      await servico.from('turmas').update({ instrutor_email: email }).eq('instrutor_email', emailAnterior);
+      await servico.from('notificacoes').update({ destinatario: email }).eq('destinatario', emailAnterior).eq('status', 'pendente');
+    }
+    await servico.from('usuarios_departamentos').delete().eq('usuario_id', id);
+    if (perfil === 'gestor') await servico.from('usuarios_departamentos').insert(departamentos.map((d) => ({ usuario_id: id, departamento_id: d })));
+    return responder(200, { ok: true });
   }
   if (c.acao === 'link') {
     const { data: u } = await servico.from('usuarios').select('email').eq('id', String(c.usuario_id ?? '')).maybeSingle();

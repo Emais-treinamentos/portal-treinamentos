@@ -40,7 +40,9 @@ export function Acessos() {
 }
 
 function Usuarios({ novo, aoFecharNovo }: { novo: boolean; aoFecharNovo: () => void }) {
-  const l = useDados(async () => (await supabase.from('usuarios').select('id, nome, email, perfil, ativo').order('nome')).data ?? []);
+  const l = useDados(async () => (await supabase.from('usuarios').select('id, nome, email, perfil, ativo, colaborador_id').order('nome')).data ?? []);
+  const cols = useDados(async () => (await supabase.from('colaboradores').select('id, nome, email, ativo').order('nome')).data ?? []);
+  const [editar, setEditar] = useState<Acesso | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   return (
@@ -48,16 +50,40 @@ function Usuarios({ novo, aoFecharNovo }: { novo: boolean; aoFecharNovo: () => v
       {erro && <Mensagem tipo="erro" aoFechar={() => setErro(null)}>{erro}</Mensagem>}
       {link && <div className="aviso aviso-ok aviso-faixa"><span>Envie este link à pessoa para definir a senha: <input readOnly value={link} onFocus={(e) => e.target.select()} style={{ width: '100%' }} /></span><button className="botao botao-discreto" type="button" onClick={() => setLink(null)}>Fechar</button></div>}
       {l.carregando && !l.dados && <Carregando />}
-      <div className="tabela-rolagem"><table className="tabela"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th /></tr></thead>
+      <div className="tabela-rolagem"><table className="tabela"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Colaborador</th><th>Situação</th><th /></tr></thead>
         <tbody>{(l.dados ?? []).map((u) => (
-          <tr key={u.id} className={u.ativo ? undefined : 'linha-inativa'}><td>{u.nome}</td><td>{u.email}</td><td>{nomesPerfil[u.perfil as Perfil]}</td><td>{u.ativo ? 'Ativo' : 'Inativo'}</td>
+          <tr key={u.id} className={u.ativo ? undefined : 'linha-inativa'}><td>{u.nome}</td><td>{u.email}</td><td>{textoPerfil(u.perfil as Perfil)}</td><td>{cols.dados?.find((c) => c.id === u.colaborador_id)?.nome ?? 'Sem vínculo'}</td><td>{u.ativo ? 'Ativo' : 'Inativo'}</td>
             <td className="linha-acoes">
+              <button className="botao botao-discreto botao-pequeno" type="button" onClick={() => setEditar(u as Acesso)}>Editar</button>
               <button className="botao botao-discreto botao-pequeno" type="button" onClick={() => void chamar({ acao: 'link', usuario_id: u.id }).then((r) => setLink(r.link ?? null)).catch((e) => setErro(textoErro(e)))}>Gerar link</button>
               <button className="botao botao-discreto botao-pequeno" type="button" onClick={() => void chamar({ acao: 'ativar', usuario_id: u.id, ativo: !u.ativo }).then(() => l.recarregar()).catch((e) => setErro(textoErro(e)))}>{u.ativo ? 'Desativar' : 'Reativar'}</button>
             </td></tr>
         ))}</tbody></table></div>
+      {editar && <EditarAcesso u={editar} colaboradores={cols.dados ?? []} aoFechar={() => setEditar(null)} aoSalvar={() => void l.recarregar()} />}
       {novo && <NovoAcesso aoFechar={aoFecharNovo} aoCriar={(k) => { setLink(k); void l.recarregar(); }} />}
     </>
+  );
+}
+
+type Acesso = { id: string; nome: string; email: string; perfil: Perfil; ativo: boolean; colaborador_id: string | null };
+// Gestor e Gente e Gestão também entram como instrutor, escolhendo o perfil ao entrar.
+const textoPerfil = (p: Perfil) => (p === 'admin' || p === 'gestor' ? `${nomesPerfil[p]} e Instrutor` : nomesPerfil[p]);
+
+function EditarAcesso({ u, colaboradores, aoFechar, aoSalvar }: { u: Acesso; colaboradores: { id: string; nome: string; ativo: boolean }[]; aoFechar: () => void; aoSalvar: () => void }) {
+  const deps = useDados(async () => (await supabase.from('departamentos').select('id, nome').order('nome')).data ?? []);
+  const atuais = useDados(async () => (await supabase.from('usuarios_departamentos').select('departamento_id').eq('usuario_id', u.id)).data ?? []);
+  const [nome, setNome] = useState(u.nome); const [email, setEmail] = useState(u.email); const [perfil, setPerfil] = useState<Perfil>(u.perfil); const [col, setCol] = useState(u.colaborador_id ?? ''); const [sel, setSel] = useState<string[] | null>(null);
+  const marcados = sel ?? (atuais.dados ?? []).map((d) => d.departamento_id as string);
+  const opcoes = colaboradores.filter((c) => c.ativo || c.id === u.colaborador_id);
+  return (
+    <FormDialogo titulo="Editar acesso" rotulo="Salvar" aoFechar={aoFechar} desabilitar={atuais.carregando} aoEnviar={async () => { await chamar({ acao: 'editar', usuario_id: u.id, nome, email, perfil, colaborador_id: col || null, departamentos: marcados }); aoSalvar(); }}>
+      <Campo rotulo="Nome"><input required value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
+      <Campo rotulo="E-mail"><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Campo>
+      {email.trim().toLowerCase() !== u.email && <p className="apoio">A pessoa passa a entrar com o novo e-mail. As turmas em que ela é instrutora acompanham a troca.</p>}
+      <Campo rotulo="Perfil"><select value={perfil} onChange={(e) => setPerfil(e.target.value as Perfil)}>{Object.entries(nomesPerfil).map(([k, v]) => <option key={k} value={k}>{textoPerfil(k as Perfil) === v ? v : `${v} (também entra como Instrutor)`}</option>)}</select></Campo>
+      <Campo rotulo="Colaborador"><select value={col} onChange={(e) => setCol(e.target.value)}><option value="">Sem vínculo</option>{opcoes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></Campo>
+      {perfil === 'gestor' && <fieldset className="campo-grupo"><legend>Departamentos</legend>{(deps.dados ?? []).map((d) => <label className="opcao" key={d.id}><input type="checkbox" checked={marcados.includes(d.id)} onChange={(e) => setSel(e.target.checked ? [...marcados, d.id] : marcados.filter((x) => x !== d.id))} />{d.nome}</label>)}</fieldset>}
+    </FormDialogo>
   );
 }
 
