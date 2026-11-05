@@ -86,6 +86,7 @@ function Cargos() {
   const deps = useDados(async () => (await supabase.from('departamentos').select('id, nome').order('nome')).data ?? []);
   const v = useVinculos();
   const [novo, setNovo] = useState(false); const [nome, setNome] = useState(''); const [dep, setDep] = useState('');
+  const [editando, setEditando] = useState<{ id: string; nome: string; departamento_id: string } | null>(null);
   const [filtro, setFiltro] = useState(''); const [ativos, setAtivos] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const todos = l.dados ?? [];
@@ -103,20 +104,34 @@ function Cargos() {
       </div>
       <div className="tabela-rolagem">
         <table className="tabela"><thead><tr><th>Cargo</th><th>Departamento</th><th>Treinamentos</th><th>Status</th><th>Ações</th></tr></thead>
-          <tbody>{linhas.map((c) => { const d = c.departamentos as unknown as { nome: string } | null; return <tr key={c.id}><td>{c.nome}</td><td>{d?.nome}</td><td>{(v.dados ?? []).filter((x) => x.cargo_id === c.id).length}</td><td>{c.ativo ? 'Ativo' : 'Inativo'}</td><td><button className="botao botao-secundario botao-pequeno" type="button" onClick={() => void ok(supabase.from('cargos').update({ ativo: !c.ativo }).eq('id', c.id)).then(() => l.recarregar()).catch((e) => setErro(textoErro(e)))}>{c.ativo ? 'Inativar' : 'Reativar'}</button></td></tr>; })}</tbody>
+          <tbody>{linhas.map((c) => { const d = c.departamentos as unknown as { nome: string } | null; return <tr key={c.id}><td>{c.nome}</td><td>{d?.nome}</td><td>{(v.dados ?? []).filter((x) => x.cargo_id === c.id).length}</td><td>{c.ativo ? 'Ativo' : 'Inativo'}</td><td><span className="linha-acoes"><button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setEditando({ id: c.id, nome: c.nome, departamento_id: c.departamento_id })}>Editar</button><button className="botao botao-secundario botao-pequeno" type="button" onClick={() => void ok(supabase.from('cargos').update({ ativo: !c.ativo }).eq('id', c.id)).then(() => l.recarregar()).catch((e) => setErro(textoErro(e)))}>{c.ativo ? 'Inativar' : 'Reativar'}</button></span></td></tr>; })}</tbody>
         </table>
       </div>
       {novo && <FormDialogo titulo="Novo cargo" rotulo="Salvar" aoFechar={() => setNovo(false)} aoEnviar={async () => { await ok(supabase.from('cargos').insert({ nome: nome.trim(), departamento_id: dep })); setNome(''); void l.recarregar(); }}>
         <Campo rotulo="Nome"><input required value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
         <Campo rotulo="Departamento"><select required value={dep} onChange={(e) => setDep(e.target.value)}><option value="">Escolha</option>{(deps.dados ?? []).map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}</select></Campo>
       </FormDialogo>}
+      {editando && <EditarCargo c={editando} deps={deps.dados ?? []} aoFechar={() => setEditando(null)} aoSalvar={() => void l.recarregar()} />}
     </>
+  );
+}
+
+function EditarCargo({ c, deps, aoFechar, aoSalvar }: { c: { id: string; nome: string; departamento_id: string }; deps: { id: string; nome: string }[]; aoFechar: () => void; aoSalvar: () => void }) {
+  const [nome, setNome] = useState(c.nome); const [dep, setDep] = useState(c.departamento_id);
+  return (
+    <FormDialogo titulo="Editar cargo" rotulo="Salvar" aoFechar={aoFechar} desabilitar={!nome.trim() || !dep} aoEnviar={async () => { await ok(supabase.from('cargos').update({ nome: nome.trim(), departamento_id: dep }).eq('id', c.id)); aoSalvar(); }}>
+      <Campo rotulo="Nome"><input required value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
+      <Campo rotulo="Departamento"><select required value={dep} onChange={(e) => setDep(e.target.value)}>{deps.map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}</select></Campo>
+      <p className="apoio">O novo nome vale em todo o portal. Os treinamentos do cargo não mudam.</p>
+      {dep !== c.departamento_id && <p className="apoio">Os colaboradores deste cargo passam para o novo departamento.</p>}
+    </FormDialogo>
   );
 }
 
 function Departamentos() {
   const l = useDados(async () => (await supabase.from('departamentos').select('id, nome').order('nome')).data ?? []);
   const [nome, setNome] = useState(''); const [erro, setErro] = useState<string | null>(null);
+  const [editando, setEditando] = useState<{ id: string; nome: string } | null>(null);
   return (
     <>
       {erro && <Mensagem tipo="erro">{erro}</Mensagem>}
@@ -124,8 +139,19 @@ function Departamentos() {
         <Campo rotulo="Novo departamento"><input required value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
         <button className="botao" type="submit">Incluir</button>
       </form>
-      {(l.dados ?? []).map((d) => <div className="pessoa" key={d.id}><span>{d.nome}</span></div>)}
+      {(l.dados ?? []).map((d) => <div className="pessoa" key={d.id}><span>{d.nome}</span><button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setEditando(d)}>Editar</button></div>)}
+      {editando && <EditarDepartamento d={editando} aoFechar={() => setEditando(null)} aoSalvar={() => void l.recarregar()} />}
     </>
+  );
+}
+
+function EditarDepartamento({ d, aoFechar, aoSalvar }: { d: { id: string; nome: string }; aoFechar: () => void; aoSalvar: () => void }) {
+  const [nome, setNome] = useState(d.nome);
+  return (
+    <FormDialogo titulo="Editar departamento" rotulo="Salvar" aoFechar={aoFechar} desabilitar={!nome.trim()} aoEnviar={async () => { await ok(supabase.from('departamentos').update({ nome: nome.trim() }).eq('id', d.id)); aoSalvar(); }}>
+      <Campo rotulo="Nome"><input required value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
+      <p className="apoio">O novo nome vale em todo o portal. Cargos e colaboradores continuam ligados a este departamento.</p>
+    </FormDialogo>
   );
 }
 

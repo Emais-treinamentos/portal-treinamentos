@@ -314,5 +314,27 @@ begin
   delete from turmas where id in (v_t, v_o);
   update colaboradores set data_admissao = current_date - 400 where id = v_c;
 end $x$;
+
+-- Edição de cargo e departamento
+do $x$
+declare v_c uuid; v_cg uuid; v_d uuid; v_nome text;
+begin
+  execute 'reset role';
+  select c.id, c.cargo_id into v_c, v_cg from colaboradores c join movimentacoes m on m.colaborador_id = c.id and m.data_fim is null and m.cargo_id = c.cargo_id where c.ativo limit 1;
+  select d.id into v_d from departamentos d where d.id <> (select departamento_id from cargos where id = v_cg) limit 1;
+  perform teste.como('gestao.teste@example.com');
+  update departamentos set nome = nome || ' X' where id = v_d returning nome into v_nome;
+  update cargos set departamento_id = v_d, nome = nome || ' X' where id = v_cg;
+  execute 'reset role';
+  perform teste.ok('nome do departamento alterado', exists (select 1 from departamentos where id = v_d and nome = v_nome));
+  perform teste.ok('colaborador acompanha o departamento do cargo', (select departamento_id from colaboradores where id = v_c) = v_d);
+  perform teste.ok('movimentação aberta acompanha', (select departamento_id from movimentacoes where colaborador_id = v_c and data_fim is null) = v_d);
+  perform teste.ok('nome do cargo aparece para o colaborador', (select g.nome like '% X' from colaboradores c join cargos g on g.id = c.cargo_id where c.id = v_c));
+  perform teste.como('instrutor.teste@example.com');
+  update departamentos set nome = 'Invadido' where id = v_d;
+  update cargos set nome = 'Invadido' where id = v_cg;
+  execute 'reset role';
+  perform teste.ok('instrutor não edita', not exists (select 1 from departamentos where nome = 'Invadido') and not exists (select 1 from cargos where nome = 'Invadido'));
+end $x$;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);
