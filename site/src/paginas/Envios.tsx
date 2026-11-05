@@ -4,7 +4,7 @@ import { dataBR, rpc, useDados } from '../lib/api';
 import { supabase } from '../lib/supabase';
 
 const nomes: Record<string, string> = {
-  aviso_instrutor: 'Confirmar agenda', lembrete_1h: 'Lembrete antes do treinamento', aviso_presenca: 'Confirmar presença', lembrete_agenda: 'Agenda sem resposta', lembrete_presenca: 'Presença pendente', aviso_decisao: 'Treinamento atualizado', aviso_cancelamento: 'Treinamento cancelado', alteracao_instrutor: 'Instrutor remarcou',
+  convocacao_colaborador: 'Convocação do colaborador', lembrete_1h_colaborador: 'Lembrete ao colaborador', alteracao_colaborador: 'Alteração para o colaborador', desmarcado_colaborador: 'Desmarcação para o colaborador', aviso_instrutor: 'Confirmar agenda', lembrete_1h: 'Lembrete antes do treinamento', aviso_presenca: 'Confirmar presença', lembrete_agenda: 'Agenda sem resposta', lembrete_presenca: 'Presença pendente', aviso_decisao: 'Treinamento atualizado', aviso_cancelamento: 'Treinamento cancelado', alteracao_instrutor: 'Instrutor remarcou',
   avaliacao_treinamento: 'Avaliar o treinamento', assinatura_solicitada: 'Assinar documento', assinatura_concluida: 'Documento assinado',
 };
 

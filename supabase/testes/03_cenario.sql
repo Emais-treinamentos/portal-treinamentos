@@ -389,5 +389,68 @@ begin
   update usuarios set perfil = 'gestor' where id = v_gestor;
   delete from usuarios_colaboradores where usuario_id = v_gestor;
 end $x$;
+-- Avisos ao colaborador
+do $x$
+declare v_t uuid; v_tr uuid; v_com uuid; v_com2 uuid; v_sem uuid; v_novo uuid; v_cg uuid; v_e text; v_e2 text; v_inst text := 'outro.instrutor@example.com'; v_d date := (now() at time zone 'America/Sao_Paulo')::date + 10;
+  conta int;
+begin
+  execute 'reset role';
+  update parametros set valor = '2026-01-01' where chave = 'avisos_desde';
+  select id into v_tr from treinamentos where ativo order by nome limit 1;
+  select id, cargo_id, lower(email) into v_com, v_cg, v_e from colaboradores where ativo and email is not null order by nome limit 1;
+  select id, lower(email) into v_com2, v_e2 from colaboradores where ativo and email is not null and id <> v_com order by nome limit 1;
+  select id into v_sem from colaboradores where ativo and id not in (v_com, v_com2) order by nome limit 1;
+  update colaboradores set email = null where id = v_sem;
+  select id into v_novo from colaboradores where ativo and id not in (v_com, v_com2, v_sem) and email is not null order by nome limit 1;
+  insert into turmas (treinamento_id, status, data, hora_inicio, sala, instrutor_email) values (v_tr, 'agenda_confirmada', v_d, '10:00', 'Sala aviso', v_inst) returning id into v_t;
+  insert into turma_participantes (turma_id, colaborador_id, cargo_na_data_id, origem) values (v_t, v_com, v_cg, 'manual'), (v_t, v_com2, v_cg, 'manual'), (v_t, v_sem, v_cg, 'manual');
+  perform teste.ok('sem aviso antes de formalizar', not exists (select 1 from notificacoes where turma_id = v_t and tipo like '%_colaborador'));
+  update turmas set status = 'convite_enviado', convite_enviado_em = now() where id = v_t;
+  select count(*) into conta from notificacoes where turma_id = v_t and tipo = 'convocacao_colaborador';
+  perform teste.ok('convoca só quem tem e-mail', conta = 2);
+  -- Horário muda antes do envio: a convocação pendente já sai com o dado novo, sem e-mail extra.
+  update turmas set hora_inicio = '11:00' where id = v_t;
+  perform teste.ok('sem alteração para quem não recebeu a convocação', not exists (select 1 from notificacoes where turma_id = v_t and tipo = 'alteracao_colaborador'));
+  update notificacoes set status = 'enviada', enviado_em = now() where turma_id = v_t and destinatario = v_e;
+  update turmas set hora_inicio = '12:00' where id = v_t;
+  perform teste.ok('alteração só para quem já foi convocado', (select array_agg(destinatario) from notificacoes where turma_id = v_t and tipo = 'alteracao_colaborador' and status = 'pendente') = array[v_e]);
+  update turmas set sala = 'Sala nova' where id = v_t;
+  perform teste.ok('alteração não acumula', (select count(*) from notificacoes where turma_id = v_t and tipo = 'alteracao_colaborador' and status = 'pendente') = 1);
+  insert into turma_participantes (turma_id, colaborador_id, cargo_na_data_id, origem) values (v_t, v_novo, v_cg, 'manual');
+  perform teste.ok('quem entra depois é convocado', (select count(*) from notificacoes where turma_id = v_t and tipo = 'convocacao_colaborador') = 3);
+  delete from turma_participantes where turma_id = v_t and colaborador_id = v_com2;
+  perform teste.ok('quem sai antes do envio não recebe nada', not exists (select 1 from notificacoes where turma_id = v_t and destinatario = v_e2 and status = 'pendente'));
+  -- Lembrete: turma entrando na janela de 1 hora.
+  update turmas set data = (now() at time zone 'America/Sao_Paulo')::date, hora_inicio = ((now() at time zone 'America/Sao_Paulo') + interval '30 minutes')::time(0) where id = v_t;
+  perform app.gerar_avisos_por_horario(); perform app.gerar_avisos_por_horario();
+  if ((now() at time zone 'America/Sao_Paulo') + interval '30 minutes')::date = (now() at time zone 'America/Sao_Paulo')::date then
+    perform teste.ok('lembrete de 1 hora ao colaborador, uma vez só', (select count(*) from notificacoes where turma_id = v_t and tipo = 'lembrete_1h_colaborador' and destinatario = v_e) = 1);
+    perform teste.ok('lembrete não vai a quem saiu nem a quem não tem e-mail', (select count(*) from notificacoes where turma_id = v_t and tipo = 'lembrete_1h_colaborador') = 2);
+  else perform teste.ok('lembrete de 1 hora ao colaborador, uma vez só', true); perform teste.ok('lembrete não vai a quem saiu nem a quem não tem e-mail', true); end if;
+  update turmas set data = v_d, hora_inicio = '12:00' where id = v_t;
+  perform teste.como('gestao.teste@example.com');
+  perform cancelar_turma(v_t, 'Teste');
+  execute 'reset role';
+  perform teste.ok('cancelamento avisa quem já foi convocado', (select array_agg(destinatario) from notificacoes where turma_id = v_t and tipo = 'desmarcado_colaborador' and status = 'pendente') = array[v_e]);
+  perform teste.ok('cancelamento descarta os outros avisos', not exists (select 1 from notificacoes where turma_id = v_t and status = 'pendente' and tipo in ('convocacao_colaborador', 'alteracao_colaborador', 'lembrete_1h_colaborador')));
+  perform teste.ok('monta o e-mail do colaborador', (app.montar_email('convocacao_colaborador', v_t) ->> 'assunto') like 'Convocação:%');
+  -- Volta para reagendar: desmarca e convoca de novo ao formalizar.
+  insert into turmas (treinamento_id, status, data, hora_inicio, sala, instrutor_email) values (v_tr, 'agenda_confirmada', v_d + 1, '10:00', 'Sala aviso 2', v_inst) returning id into v_t;
+  insert into turma_participantes (turma_id, colaborador_id, cargo_na_data_id, origem) values (v_t, v_com, v_cg, 'manual');
+  update turmas set status = 'convite_enviado', convite_enviado_em = now() where id = v_t;
+  update notificacoes set status = 'enviada', enviado_em = now() where turma_id = v_t;
+  update turmas set status = 'aguardando_instrutor', convite_enviado_em = null where id = v_t;
+  perform teste.ok('reagendar desmarca', exists (select 1 from notificacoes where turma_id = v_t and tipo = 'desmarcado_colaborador' and status = 'pendente'));
+  update turmas set status = 'convite_enviado', convite_enviado_em = now() where id = v_t;
+  perform teste.ok('nova formalização convoca de novo', exists (select 1 from notificacoes where turma_id = v_t and tipo = 'convocacao_colaborador' and status = 'pendente'));
+  -- Turma antiga não gera aviso.
+  insert into turmas (treinamento_id, status, data, hora_inicio, sala, instrutor_email) values (v_tr, 'agenda_confirmada', v_d - 400, '10:00', 'Sala aviso 3', v_inst) returning id into v_t;
+  insert into turma_participantes (turma_id, colaborador_id, cargo_na_data_id, origem) values (v_t, v_com, v_cg, 'manual');
+  update turmas set status = 'convite_enviado' where id = v_t;
+  perform teste.ok('turma passada não convoca', not exists (select 1 from notificacoes where turma_id = v_t and tipo like '%_colaborador'));
+  update turmas set status = 'cancelada' where id = v_t;
+  delete from notificacoes where tipo like '%_colaborador';
+  update colaboradores set email = 'restaurado@example.com' where id = v_sem;
+end $x$;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);
