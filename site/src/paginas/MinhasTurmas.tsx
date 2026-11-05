@@ -14,11 +14,11 @@ const grupos: [string, string, string[]][] = [
 ];
 
 export function MinhasTurmas() {
-  return <TurmasInstrutor titulo="Minhas turmas" apoio="Confirme a agenda, peça alterações e registre a presença por aqui." grupos={grupos} vazio="Você não tem turmas como instrutor." />;
+  return <TurmasInstrutor titulo="Minhas turmas" apoio="Confirme a agenda, remarque e registre a presença por aqui." grupos={grupos} vazio="Você não tem turmas como instrutor." />;
 }
 
 export function ConfirmarAgenda() {
-  return <TurmasInstrutor titulo="Confirmar Agenda" apoio="Confirme os treinamentos que você vai aplicar, proponha outro horário ou recuse."
+  return <TurmasInstrutor titulo="Confirmar Agenda" apoio="Confirme os treinamentos que você vai aplicar, escolha outro horário ou recuse."
     grupos={[['confirmar', 'Aguardando sua confirmação', ['aguardando_instrutor']], ['formalizar', 'Confirmados, aguardando convite', ['formalizar']], ['agendadas', 'Agendados', ['agendadas']]]} vazio="Nenhum treinamento para confirmar." />;
 }
 
@@ -112,7 +112,7 @@ const paraAgenda = (t: TurmaDetalhe): EventoAgenda => ({ id: t.id, titulo: `Trei
 export function PainelInstrutor({ id, aoMudar, consulta = false }: { id: string; aoMudar: () => void; consulta?: boolean }) {
   const d = useDados(() => rpc<TurmaDetalhe>('turma_detalhe', { p_turma: id }), [id]);
   const [erro, setErro] = useState<string | null>(null);
-  const [janela, setJanela] = useState<'propor' | 'recusar' | 'solicitar' | null>(null);
+  const [janela, setJanela] = useState<'remarcar' | 'recusar' | 'solicitar' | null>(null);
   const t = d.dados;
   async function acao(f: () => Promise<unknown>) {
     setErro(null);
@@ -124,7 +124,7 @@ export function PainelInstrutor({ id, aoMudar, consulta = false }: { id: string;
   const h = t.hora_inicio ?? t.hora_opcao_1;
   const pessoas = t.participantes.filter((p) => p.situacao !== 'nao_aplicavel');
   const aberta = t.solicitacoes.find((s) => s.status === 'aberta');
-  const ultima = t.solicitacoes.find((s) => s.status !== 'aberta');
+  const ultima = t.solicitacoes.find((s) => s.status !== 'aberta' && !s.resposta?.startsWith('Remarcado pelo instrutor'));
   const presenca = t.etapa === 'presenca' && !consulta;
   const faltam = pessoas.filter((p) => p.situacao === 'convocado').length;
   const recarregar = () => { void d.recarregar(); aoMudar(); };
@@ -159,7 +159,7 @@ export function PainelInstrutor({ id, aoMudar, consulta = false }: { id: string;
             {[t.hora_opcao_1, t.hora_opcao_2].filter(Boolean).map((op) => <button key={op} className="botao" type="button" onClick={() => void acao(() => rpc('responder_agenda', { p_turma: t.id, p_acao: 'aceitar', p_hora: op }))}>Confirmar {hora(op)}</button>)}
           </div>
           <div className="linha-acoes">
-            <button className="botao botao-secundario" type="button" onClick={() => setJanela('propor')}>Propor outro horário</button>
+            <button className="botao botao-secundario" type="button" onClick={() => setJanela('remarcar')}>Escolher outro horário</button>
             <button className="botao botao-discreto" type="button" onClick={() => setJanela('recusar')}>Recusar</button>
           </div>
         </div>
@@ -183,24 +183,71 @@ export function PainelInstrutor({ id, aoMudar, consulta = false }: { id: string;
       {presenca && <p className="apoio">Pode corrigir até concluir. Nenhuma marcação se perde.</p>}
       <div className="linha-acoes">
         {presenca && <button className="botao" type="button" disabled={faltam > 0 || !pessoas.length} onClick={() => void acao(() => rpc('concluir_presenca', { p_turma: t.id }))}>Concluir presença</button>}
-        {!consulta && !aberta && t.status !== 'cancelada' && t.status !== 'aguardando_instrutor' && <button className="botao botao-secundario" type="button" onClick={() => setJanela('solicitar')}>{t.presenca_concluida_em ? 'Solicitar correção' : 'Solicitar alteração'}</button>}
+        {!consulta && !aberta && ['agenda_confirmada', 'convite_enviado'].includes(t.status) && t.etapa !== 'presenca' && <button className="botao" type="button" onClick={() => setJanela('remarcar')}>Remarcar</button>}
+        {!consulta && !aberta && t.status !== 'cancelada' && t.status !== 'aguardando_instrutor' && <button className="botao botao-secundario" type="button" onClick={() => setJanela('solicitar')}>{t.presenca_concluida_em ? 'Solicitar correção' : t.etapa === 'presenca' ? 'Solicitar alteração' : 'Solicitar cancelamento'}</button>}
       </div>
-      {janela === 'propor' && <Propor id={t.id} aoFechar={() => setJanela(null)} aoSalvar={recarregar} />}
+      {janela === 'remarcar' && <Remarcar t={t} aoFechar={() => setJanela(null)} aoSalvar={recarregar} />}
       {janela === 'recusar' && <Recusar id={t.id} aoFechar={() => setJanela(null)} aoSalvar={recarregar} />}
       {janela === 'solicitar' && <Solicitar t={t} aoFechar={() => setJanela(null)} aoSalvar={recarregar} />}
     </aside>
   );
 }
 
-function Propor({ id, aoFechar, aoSalvar }: { id: string; aoFechar: () => void; aoSalvar: () => void }) {
+type Verificacao = {
+  ok: boolean; limite: string | null; prazo_aberto: boolean; passado?: boolean; fora_do_prazo?: boolean; igual?: boolean; antes_da_admissao?: string | null;
+  indisponiveis: { nome: string; treinamento: string; inicio: string; fim: string; confirmada: boolean }[];
+  instrutor: { treinamento: string; inicio: string; fim: string }[];
+  sala: { treinamento: string; inicio: string; fim: string }[];
+};
+
+// Cada data e horário digitados são conferidos na hora. Só libera quando todos os participantes podem.
+function Remarcar({ t, aoFechar, aoSalvar }: { t: TurmaDetalhe; aoFechar: () => void; aoSalvar: () => void }) {
   const [data, setData] = useState(''); const [h, setH] = useState(''); const [motivo, setMotivo] = useState('');
+  const v = useDados(() => rpc<Verificacao>('verificar_novo_horario', { p_turma: t.id, p_data: data || null, p_hora: h || null }), [t.id, data, h]);
+  const d = v.dados;
+  const preenchido = !!data && !!h;
+  const limite = d?.limite ? dataBR(d.limite) : null;
+  if (d && !d.prazo_aberto) {
+    return (
+      <FormDialogo titulo="Remarcar treinamento" rotulo="Enviar a Gente e Gestão" aoFechar={aoFechar} desabilitar={!motivo.trim()}
+        aoEnviar={async () => { await rpc('solicitar_alteracao', { p_turma: t.id, p_tipo: 'alteracao', p_motivo: motivo, p_proposta: { ...(data ? { data } : {}), ...(h ? { hora: h } : {}) } }); aoSalvar(); }}>
+        <p className="aviso aviso-erro">O prazo para remarcar terminou em {limite}. Agora só Gente e Gestão pode alterar.</p>
+        <div className="grade-2">
+          <Campo rotulo="Data que você sugere"><input type="date" value={data} onChange={(e) => setData(e.target.value)} /></Campo>
+          <Campo rotulo="Horário que você sugere"><input type="time" value={h} onChange={(e) => setH(e.target.value)} /></Campo>
+        </div>
+        <Campo rotulo="Motivo"><textarea required rows={2} value={motivo} onChange={(e) => setMotivo(e.target.value)} /></Campo>
+      </FormDialogo>
+    );
+  }
   return (
-    <FormDialogo titulo="Propor outro horário" rotulo="Enviar a Gente e Gestão" aoFechar={aoFechar} aoEnviar={async () => { await rpc('responder_agenda', { p_turma: id, p_acao: 'propor', p_hora: h || null, p_nova_data: data || null, p_motivo: motivo }); aoSalvar(); }}>
+    <FormDialogo titulo="Remarcar treinamento" rotulo="Confirmar novo horário" aoFechar={aoFechar} desabilitar={!d?.ok || v.carregando || !motivo.trim()}
+      aoEnviar={async () => { await rpc('instrutor_remarcar', { p_turma: t.id, p_data: data, p_hora: h, p_motivo: motivo }); aoSalvar(); }}>
+      {limite && <p className="apoio">Você pode remarcar até <strong>{limite}</strong>. Depois disso, só Gente e Gestão altera.</p>}
       <div className="grade-2">
-        <Campo rotulo="Nova data"><input type="date" value={data} onChange={(e) => setData(e.target.value)} /></Campo>
-        <Campo rotulo="Novo horário"><input type="time" value={h} onChange={(e) => setH(e.target.value)} /></Campo>
+        <Campo rotulo="Nova data"><input type="date" required max={d?.limite?.slice(0, 10) ?? undefined} value={data} onChange={(e) => setData(e.target.value)} /></Campo>
+        <Campo rotulo="Novo horário"><input type="time" required value={h} onChange={(e) => setH(e.target.value)} /></Campo>
       </div>
+      {preenchido && d && !v.carregando && (
+        <div className="remarcar-resultado" role="status">
+          {d.ok && <p className="aviso aviso-ok">Horário livre para todos os {t.participantes.filter((p) => p.situacao === 'convocado').length} participantes.</p>}
+          {d.fora_do_prazo && <p className="aviso aviso-erro">Esta data passa do limite de {limite}.</p>}
+          {d.passado && <p className="aviso aviso-erro">Escolha uma data e um horário futuros.</p>}
+          {d.antes_da_admissao && <p className="aviso aviso-erro">Esta data é anterior à admissão de {d.antes_da_admissao}.</p>}
+          {d.igual && <p className="aviso aviso-info">Este já é o horário do treinamento.</p>}
+          {!!d.indisponiveis.length && (
+            <div className="aviso aviso-erro">
+              <strong>Indisponíveis neste horário ({new Set(d.indisponiveis.map((i) => i.nome)).size}):</strong>
+              <ul>{d.indisponiveis.map((i) => <li key={`${i.nome}${i.treinamento}${i.inicio}`}>{i.nome}: {i.treinamento}, {i.inicio} às {i.fim}{i.confirmada ? '' : ' (aguardando confirmação)'}</li>)}</ul>
+            </div>
+          )}
+          {!!d.instrutor.length && <p className="aviso aviso-erro">Você já tem {d.instrutor.map((i) => `${i.treinamento}, ${i.inicio} às ${i.fim}`).join('; ')}.</p>}
+          {!!d.sala.length && <p className="aviso aviso-erro">A sala {t.sala} está ocupada: {d.sala.map((i) => `${i.treinamento}, ${i.inicio} às ${i.fim}`).join('; ')}.</p>}
+        </div>
+      )}
+      {v.erro && <p className="aviso aviso-erro">{v.erro}</p>}
       <Campo rotulo="Motivo"><textarea required rows={2} value={motivo} onChange={(e) => setMotivo(e.target.value)} /></Campo>
+      <p className="apoio">Gente e Gestão recebe um aviso. Se o treinamento já está no seu Outlook, atualize o evento depois de remarcar.</p>
     </FormDialogo>
   );
 }
@@ -217,12 +264,13 @@ function Recusar({ id, aoFechar, aoSalvar }: { id: string; aoFechar: () => void;
 
 function Solicitar({ t, aoFechar, aoSalvar }: { t: TurmaDetalhe; aoFechar: () => void; aoSalvar: () => void }) {
   const concluida = !!t.presenca_concluida_em;
-  const [tipo, setTipo] = useState(concluida ? 'correcao_presenca' : 'alteracao');
+  const podeMudar = t.etapa === 'presenca';
+  const [tipo, setTipo] = useState(concluida ? 'correcao_presenca' : podeMudar ? 'alteracao' : 'cancelamento');
   const [data, setData] = useState(''); const [h, setH] = useState(''); const [motivo, setMotivo] = useState('');
   return (
-    <FormDialogo titulo={concluida ? 'Solicitar correção' : 'Solicitar alteração'} rotulo="Enviar a Gente e Gestão" aoFechar={aoFechar} desabilitar={!motivo.trim()}
+    <FormDialogo titulo={concluida ? 'Solicitar correção' : podeMudar ? 'Solicitar alteração' : 'Solicitar cancelamento'} rotulo="Enviar a Gente e Gestão" aoFechar={aoFechar} desabilitar={!motivo.trim()}
       aoEnviar={async () => { await rpc('solicitar_alteracao', { p_turma: t.id, p_tipo: tipo, p_motivo: motivo, p_proposta: tipo === 'alteracao' ? { ...(data ? { data } : {}), ...(h ? { hora: h } : {}) } : {} }); aoSalvar(); }}>
-      {!concluida && <Campo rotulo="O que você precisa?"><select value={tipo} onChange={(e) => setTipo(e.target.value)}><option value="alteracao">Mudar data ou horário</option><option value="cancelamento">Cancelar a turma</option></select></Campo>}
+      {!concluida && <Campo rotulo="O que você precisa?"><select value={tipo} onChange={(e) => setTipo(e.target.value)}>{podeMudar && <option value="alteracao">Mudar data ou horário</option>}<option value="cancelamento">Cancelar a turma</option></select></Campo>}
       {tipo === 'alteracao' && <div className="grade-2"><Campo rotulo="Nova data"><input type="date" value={data} onChange={(e) => setData(e.target.value)} /></Campo><Campo rotulo="Novo horário"><input type="time" value={h} onChange={(e) => setH(e.target.value)} /></Campo></div>}
       <Campo rotulo="Motivo"><textarea required rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} /></Campo>
     </FormDialogo>

@@ -265,5 +265,54 @@ begin
   perform teste.ok('modelo desligado cancela o aviso', not exists (select 1 from notificacoes where tipo = 'aviso_presenca' and turma_id = v_t and status = 'pendente'));
   update modelos_email set ativo = true where tipo = 'aviso_presenca';
 end $x$;
+
+-- Instrutor remarca direto, com travas
+do $x$
+declare v_t uuid; v_o uuid; v_tr uuid; v_c uuid; v jsonb; v_d date := current_date + 5; v_e text := 'instrutor.teste@example.com'; v_n int; v_ref date;
+begin
+  execute 'reset role';
+  select id into v_c from colaboradores where ativo limit 1;
+  update colaboradores set data_admissao = current_date where id = v_c;
+  delete from movimentacoes where colaborador_id = v_c;
+  select id into v_tr from treinamentos where ativo limit 1;
+  insert into turmas (treinamento_id, status, data, hora_inicio, hora_opcao_1, sala, instrutor_email) values (v_tr, 'agenda_confirmada', v_d, '09:00', '09:00', 'Externo', v_e) returning id into v_t;
+  insert into turma_participantes (turma_id, colaborador_id, origem) values (v_t, v_c, 'manual');
+  -- a mesma pessoa em outra turma às 14:00, de outro instrutor
+  insert into turmas (treinamento_id, status, data, hora_inicio, sala, instrutor_email) select id, 'convite_enviado', v_d, '14:00', 'Externo', 'outro@example.com' from treinamentos where id <> v_tr limit 1 returning id into v_o;
+  insert into turma_participantes (turma_id, colaborador_id) values (v_o, v_c);
+  perform teste.como(v_e);
+  v := verificar_novo_horario(v_t, v_d, '14:00');
+  perform teste.ok('mostra colaborador indisponível', not (v->>'ok')::boolean and jsonb_array_length(v->'indisponiveis') = 1 and v->'indisponiveis'->0->>'nome' is not null);
+  v := verificar_novo_horario(v_t, v_d, '11:00');
+  perform teste.ok('horário livre passa', (v->>'ok')::boolean);
+  perform teste.ok('limite é a admissão mais a janela', (v->>'limite')::date = current_date + 15);
+  v := verificar_novo_horario(v_t, current_date - 1, '11:00');
+  perform teste.ok('data antes da admissão é barrada', not (v->>'ok')::boolean and v->>'antes_da_admissao' is not null);
+  v := verificar_novo_horario(v_t, current_date + 16, '11:00');
+  perform teste.ok('data depois do limite é barrada', not (v->>'ok')::boolean and (v->>'fora_do_prazo')::boolean);
+  begin perform instrutor_remarcar(v_t, v_d, '14:00', 'Teste'); perform teste.ok('remarcar com conflito é recusado', false);
+  exception when others then perform teste.ok('remarcar com conflito é recusado: ' || sqlerrm, sqlerrm like 'Horário indisponível%'); end;
+  begin perform instrutor_remarcar(v_t, current_date + 16, '11:00', 'Teste'); perform teste.ok('remarcar depois do limite é recusado', false);
+  exception when others then perform teste.ok('remarcar depois do limite é recusado', sqlerrm like 'A data limite%'); end;
+  perform instrutor_remarcar(v_t, v_d, '11:00', 'Consulta médica');
+  execute 'reset role';
+  perform teste.ok('remarcação aplicada sem aprovação', exists (select 1 from turmas where id = v_t and hora_inicio = '11:00' and status = 'agenda_confirmada'));
+  perform teste.ok('Gente e Gestão é avisada', exists (select 1 from notificacoes where tipo = 'alteracao_instrutor' and turma_id = v_t));
+  perform teste.ok('remarcação fica no histórico', exists (select 1 from turma_solicitacoes where turma_id = v_t and status = 'aprovada' and motivo = 'Consulta médica'));
+  -- passou da janela: só Gente e Gestão
+  update colaboradores set data_admissao = current_date - 16 where id = v_c;
+  update movimentacoes set data_inicio = current_date - 16 where colaborador_id = v_c;
+  perform teste.como(v_e);
+  v := verificar_novo_horario(v_t);
+  perform teste.ok('prazo encerrado aparece', not (v->>'prazo_aberto')::boolean);
+  begin perform instrutor_remarcar(v_t, v_d, '10:00', 'Teste'); perform teste.ok('instrutor não remarca depois do prazo', false);
+  exception when others then perform teste.ok('instrutor não remarca depois do prazo', sqlerrm like 'O prazo para remarcar%'); end;
+  perform teste.como('colaborador.teste@example.com');
+  begin perform instrutor_remarcar(v_t, v_d, '10:00', 'Teste'); perform teste.ok('outra pessoa não remarca', false);
+  exception when others then perform teste.ok('outra pessoa não remarca', true); end;
+  execute 'reset role';
+  delete from turmas where id in (v_t, v_o);
+  update colaboradores set data_admissao = current_date - 400 where id = v_c;
+end $x$;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);

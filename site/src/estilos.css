@@ -2481,3 +2481,8 @@ h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
   .regra-ok, .regra-erro { text-align: left; }
   .regra-campo { flex-wrap: wrap; }
 }
+
+/* Remarcar */
+.remarcar-resultado { display: grid; gap: 8px; }
+.remarcar-resultado .aviso { margin: 0; display: block; }
+.remarcar-resultado ul { margin: 6px 0 0; padding-left: 18px; }
