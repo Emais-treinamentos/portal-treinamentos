@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Pagina, Mensagem } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
@@ -24,6 +24,7 @@ export function ListaPresenca() {
   const [busca, setBusca] = useState('');
   const [periodo, setPeriodo] = useState('');
   const [dep, setDep] = useState('');
+  const [aberto, setAberto] = useState<string | null>(null);
   const [params] = useSearchParams();
   const [sel, setSel] = useState<string | null>(params.get('colaborador'));
   const assinaturas = useAssinaturas();
@@ -64,25 +65,58 @@ export function ListaPresenca() {
       {lista.dados && (
         <div className="tabela-rolagem">
           <table className="tabela">
-            <thead><tr><th>Colaborador</th><th>Cargo</th><th>Total</th><th>Realizados</th><th>Pendentes</th><th>Assinatura</th><th>Documento</th></tr></thead>
+            <thead><tr><th aria-label="Detalhes" /><th>Colaborador</th><th>Cargo</th><th>Total</th><th>Realizados</th><th>Pendentes</th><th>Assinatura</th><th>Documento</th></tr></thead>
             <tbody>
-              {!linhas.length && <tr><td colSpan={7}>{aba === 'ativos' ? `Nenhum colaborador com admissão ou movimentação nos últimos ${JANELA_ATIVOS} dias.` : 'Nenhum colaborador no histórico.'}</td></tr>}
-              {linhas.map((c) => (
-                <tr key={c.id}>
-                  <td>{c.nome}</td>
-                  <td>{c.cargo}</td>
-                  <td>{c.total}</td>
-                  <td>{c.realizados}</td>
-                  <td>{c.motivo === 'Termo de Dispensa emitido' ? 'Termo emitido' : c.pendentes}</td>
-                  <td>{situacaoAssinatura(c.id)}</td>
-                  <td><button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setSel(c.id)}>Ver</button></td>
-                </tr>
-              ))}
+              {!linhas.length && <tr><td colSpan={8}>{aba === 'ativos' ? `Nenhum colaborador com admissão ou movimentação nos últimos ${JANELA_ATIVOS} dias.` : 'Nenhum colaborador no histórico.'}</td></tr>}
+              {linhas.map((c) => {
+                const expandido = aberto === c.id;
+                const alternar = () => setAberto(expandido ? null : c.id);
+                const dispensado = c.motivo === 'Termo de Dispensa emitido';
+                return (
+                  <Fragment key={c.id}>
+                    <tr>
+                      <td className="celula-seta"><button type="button" className="botao-seta" aria-expanded={expandido} aria-label={`${expandido ? 'Fechar' : 'Ver'} treinamentos de ${c.nome}`} onClick={alternar}><span aria-hidden="true" className={expandido ? 'seta seta-aberta' : 'seta'} /></button></td>
+                      <td><strong className="celula-nome">{c.nome}</strong></td>
+                      <td>{c.cargo}</td>
+                      <td>{c.total}</td>
+                      <td>{c.realizados > 0 && <span className="qtd qtd-feito">{c.realizados}</span>}</td>
+                      <td>{dispensado ? <span className="qtd qtd-neutra">Termo emitido</span> : c.pendentes > 0 && <button type="button" className="qtd qtd-pendente" aria-label={`${c.pendentes} pendente(s). Ver quais`} onClick={alternar}>{c.pendentes}</button>}</td>
+                      <td>{situacaoAssinatura(c.id)}</td>
+                      <td><button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setSel(c.id)}>Ver</button></td>
+                    </tr>
+                    {expandido && <tr className="linha-detalhe"><td colSpan={8}><Pendencias id={c.id} /></td></tr>}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
     </Pagina>
+  );
+}
+
+// Abre sob a linha do colaborador: primeiro o que falta, depois o que já tem turma.
+function Pendencias({ id }: { id: string }) {
+  const d = useDados(() => rpc<SituacaoColaborador>('situacao_colaborador', { p_colaborador: id }), [id]);
+  if (d.erro) return <p className="aviso aviso-erro">{d.erro}</p>;
+  if (!d.dados) return <Carregando />;
+  const pendentes = d.dados.itens.filter((i) => i.situacao === 'pendente' || i.situacao === 'ausente');
+  const comTurma = d.dados.itens.filter((i) => i.situacao === 'agendado' || i.situacao === 'planejado');
+  return (
+    <div className="pendencias">
+      <section>
+        <h3>Treinamentos pendentes ({pendentes.length})</h3>
+        {!pendentes.length && <p className="apoio">Nenhum treinamento pendente.</p>}
+        {!!pendentes.length && <ul>{pendentes.map((i) => <li key={i.treinamento_id}><span>{i.treinamento}</span><small>{i.situacao === 'ausente' ? 'Faltou na última turma' : 'Sem turma'}</small></li>)}</ul>}
+      </section>
+      {!!comTurma.length && (
+        <section>
+          <h3>Com turma ({comTurma.length})</h3>
+          <ul>{comTurma.map((i) => <li key={i.treinamento_id}><span>{i.treinamento}</span><small>{i.data_turma ? dataBR(i.data_turma) : 'Data a definir'}</small></li>)}</ul>
+        </section>
+      )}
+    </div>
   );
 }
 
