@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pagina, Mensagem } from '../componentes/Pagina';
+import { Pagina, Mensagem, VoltarLista } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Campo, FormDialogo } from '../componentes/Pecas';
 import { textoErro, useDados } from '../lib/api';
@@ -162,7 +162,7 @@ function ModelosEmail() {
       {l.erro && <Mensagem tipo="erro">{l.erro}</Mensagem>}
       {l.carregando && !l.dados && <Carregando />}
       {!!l.dados?.length && atual && (
-        <div className="mestre-detalhe">
+        <div className={`mestre-detalhe ${sel ? 'com-selecao' : 'sem-selecao'}`}>
           <div className="lista-turmas">
             {l.dados.map((m) => (
               <button key={m.tipo} type="button" className="item-lista item-modelo" aria-current={atual.tipo === m.tipo} onClick={() => setSel(m.tipo)}>
@@ -171,7 +171,7 @@ function ModelosEmail() {
               </button>
             ))}
           </div>
-          <FormModelo key={atual.tipo} m={atual} aoSalvar={() => void l.recarregar()} />
+          <div>{sel && <VoltarLista key={sel} aoVoltar={() => setSel(null)} />}<FormModelo key={atual.tipo} m={atual} aoSalvar={() => void l.recarregar()} /></div>
         </div>
       )}
     </>

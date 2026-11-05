@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pagina, Mensagem } from '../componentes/Pagina';
+import { Pagina, Mensagem, VoltarLista } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Campo, Farol, FormDialogo, SeloSituacao } from '../componentes/Pecas';
 import { Dialogo } from '../componentes/Dialogo';
@@ -37,7 +37,7 @@ function TurmasInstrutor({ titulo, apoio, grupos, vazio }: { titulo: string; apo
       {lista.carregando && !lista.dados && <Carregando />}
       {lista.dados && !visiveis.length && <p className="vazio">{vazio}</p>}
       {!!visiveis.length && (
-        <div className="mestre-detalhe">
+        <div className={`mestre-detalhe ${sel ? 'com-selecao' : 'sem-selecao'}`}>
           <div>
             {grupos.map(([g, nome, es]) => {
               const itens = visiveis.filter((t) => es.includes(t.etapa));
@@ -58,7 +58,7 @@ function TurmasInstrutor({ titulo, apoio, grupos, vazio }: { titulo: string; apo
               );
             })}
           </div>
-          {sel ? <PainelInstrutor id={sel} aoMudar={() => void lista.recarregar()} /> : <p className="vazio">Escolha um treinamento.</p>}
+          {sel ? <div><VoltarLista key={sel} aoVoltar={() => setSel(null)} /><PainelInstrutor id={sel} aoMudar={() => void lista.recarregar()} /></div> : <p className="vazio">Escolha um treinamento.</p>}
         </div>
       )}
     </Pagina>

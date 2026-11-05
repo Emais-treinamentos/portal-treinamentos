@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pagina, Mensagem } from '../componentes/Pagina';
+import { Pagina, Mensagem, VoltarLista } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Campo } from '../componentes/Pecas';
 import { rpc, useDados } from '../lib/api';
@@ -32,7 +32,7 @@ export function Satisfacao() {
             <Campo rotulo="Período"><select value={meses} onChange={(e) => setMeses(Number(e.target.value))}><option value={3}>Últimos 3 meses</option><option value={6}>Últimos 6 meses</option><option value={12}>Últimos 12 meses</option></select></Campo>
             <Campo rotulo="Instrutor"><select value={instrutor} onChange={(e) => setInstrutor(e.target.value)}><option value="">Todos</option>{x.instrutores.map((i) => <option key={i}>{i}</option>)}</select></Campo>
           </div>
-          <div className="mestre-detalhe">
+          <div className={`mestre-detalhe ${t ? 'com-selecao' : 'sem-selecao'}`}>
             <div className="lista-turmas">
               {!x.treinamentos.length && <p className="vazio">Nenhuma avaliação recebida neste período.</p>}
               {x.treinamentos.map((i) => (
@@ -43,7 +43,7 @@ export function Satisfacao() {
               ))}
               {x.treinamentos.some((i) => i.oculto) && <p className="apoio">Com menos de 3 respostas o resultado fica oculto, para proteger quem respondeu.</p>}
             </div>
-            {t ? <Detalhe t={t} /> : <p className="vazio">Escolha um treinamento para ver a análise.</p>}
+            {t ? <div><VoltarLista key={t.id} aoVoltar={() => setSel(null)} /><Detalhe t={t} /></div> : <p className="vazio">Escolha um treinamento para ver a análise.</p>}
           </div>
         </>
       )}

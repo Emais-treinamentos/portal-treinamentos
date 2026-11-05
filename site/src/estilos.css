@@ -2512,3 +2512,40 @@ h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
 @media (max-width: 720px) { .pendencias { padding-left: 0; } }
 
 .botao-link { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; color: inherit; }
+
+/* Celular: lista e detalhe em telas separadas */
+.voltar-lista { display: none; }
+@media (max-width: 860px) {
+  .voltar-lista { display: inline-flex; margin-bottom: 8px; padding-left: 0; }
+  .mestre-detalhe.com-selecao > :first-child { display: none; }
+  .mestre-detalhe.sem-selecao > :last-child { display: none; }
+}
+
+/* Celular: tabela em cartões, sem passar da largura da tela */
+@media (max-width: 760px) {
+  .tabela:not(.tabela-historico) tr { position: relative; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .tabela:not(.tabela-historico) td { min-width: 0; overflow-wrap: anywhere; }
+  .tabela:not(.tabela-historico) td.celula-principal,
+  .tabela:not(.tabela-historico) td[colspan],
+  .tabela:not(.tabela-historico) td:has(.linha-acoes),
+  .tabela:not(.tabela-historico) td:has(> .botao) { grid-column: 1 / -1; }
+  .tabela:not(.tabela-historico) td[data-rotulo]:not([data-rotulo=''])::before { content: attr(data-rotulo); display: block; margin-bottom: 2px; font-size: 0.8rem; font-weight: 400; color: var(--suave); }
+  .tabela:not(.tabela-historico) td:has(.linha-acoes)::before,
+  .tabela:not(.tabela-historico) td:has(> .botao)::before { display: none !important; }
+  .tabela:not(.tabela-historico) td:empty { display: none; }
+  .tabela .linha-acoes { flex-wrap: wrap; }
+  .tabela .celula-apoio { white-space: normal; overflow-wrap: anywhere; }
+  .celula-seta { position: absolute; top: 8px; right: 8px; width: auto; }
+  .tabela:not(.tabela-historico) tr:has(.celula-seta) .celula-principal { padding-right: 36px; }
+  .tabela tr.linha-detalhe { display: block; margin-top: -8px; }
+  .pendencias { padding-left: 0; grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Campos e filtros nunca passam da largura da tela */
+.campo, .filtros > *, .cadastro-topo > * { min-width: 0; max-width: 100%; }
+select, input, textarea { max-width: 100%; }
+@media (max-width: 860px) {
+  .campo select, .filtros select, .matriz-filtros select { width: 100%; }
+  .filtros, .cadastro-topo, .matriz-filtros, .linha-botoes { max-width: 100%; flex-wrap: wrap; }
+  .filtros > .campo, .cadastro-topo > .campo, .matriz-filtros > * { flex: 1 1 100%; }
+}

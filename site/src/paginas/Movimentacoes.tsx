@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Pagina, Mensagem } from '../componentes/Pagina';
+import { Pagina, Mensagem, VoltarLista } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Campo, Farol } from '../componentes/Pecas';
 import { dataBR, nomesAcao, nomesMovimentacao, rpc, textoErro, useDados, type SituacaoColaborador } from '../lib/api';
@@ -35,13 +35,13 @@ export function Movimentacoes() {
         </Mensagem>
       )}
       {lista.carregando && !lista.dados && <Carregando />}
-      <div className="mestre-detalhe">
+      <div className={`mestre-detalhe ${linha ? 'com-selecao' : 'sem-selecao'}`}>
         <div>
           <p className="grupo-titulo">A classificar ({pendentes.length})</p>
           <div className="lista-turmas">{pendentes.map(item)}{lista.dados && !pendentes.length && <p className="vazio">Nada a classificar.</p>}</div>
           {!!feitas.length && <><p className="grupo-titulo">Classificadas ({feitas.length})</p><div className="lista-turmas">{feitas.map(item)}</div></>}
         </div>
-        {linha ? <Classificar key={linha.colaborador_id + (linha.decidido_em ?? '')} l={linha} aoConcluir={(acao) => { setConcluida({ nome: linha.nome, colaborador_id: linha.colaborador_id, acao }); setSel(null); void lista.recarregar(); window.scrollTo({ top: 0 }); }} /> : <p className="vazio">Escolha uma pessoa.</p>}
+        {linha ? <div><VoltarLista key={linha.colaborador_id} aoVoltar={() => setSel(null)} /><Classificar key={linha.colaborador_id + (linha.decidido_em ?? '')} l={linha} aoConcluir={(acao) => { setConcluida({ nome: linha.nome, colaborador_id: linha.colaborador_id, acao }); setSel(null); void lista.recarregar(); window.scrollTo({ top: 0 }); }} /></div> : <p className="vazio">Escolha uma pessoa.</p>}
       </div>
     </Pagina>
   );

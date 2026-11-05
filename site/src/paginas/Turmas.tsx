@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
-import { Pagina, Mensagem } from '../componentes/Pagina';
+import { Pagina, Mensagem, VoltarLista } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Campo, Farol, FormDialogo, SeloSituacao } from '../componentes/Pecas';
 import { cargaTexto, dataBR, hora, horaFim, nomesEtapa, nomesStatus, nomesTipoSolicitacao, rpc, textoErro, useDados, type Etapa, type Solicitacao, type TurmaDetalhe } from '../lib/api';
@@ -50,7 +50,7 @@ export function Formalizar() {
     <Pagina titulo="Formalizar Convites" apoio="Revise os treinamentos consolidados, verifique conflitos e confirme o envio.">
       {turmas.erro && <Mensagem tipo="erro">{turmas.erro}</Mensagem>}
       {turmas.carregando && !turmas.dados && <Carregando />}
-      <div className="mestre-detalhe">
+      <div className={`mestre-detalhe ${sel ? 'com-selecao' : 'sem-selecao'}`}>
         <div>
           <label className="campo campo-busca"><span className="sr">Buscar</span><input type="search" placeholder="Buscar treinamento ou instrutor" value={busca} onChange={(e) => setBusca(e.target.value)} /></label>
           <div className="lista-turmas">
@@ -64,7 +64,7 @@ export function Formalizar() {
             ))}
           </div>
         </div>
-        {sel ? <PainelTurma id={sel} admin aoMudar={() => void turmas.recarregar()} /> : <p className="vazio">Escolha um treinamento para ver os detalhes.</p>}
+        {sel ? <div><VoltarLista key={sel} aoVoltar={() => setSel(null)} /><PainelTurma id={sel} admin aoMudar={() => void turmas.recarregar()} /></div> : <p className="vazio">Escolha um treinamento para ver os detalhes.</p>}
       </div>
     </Pagina>
   );
