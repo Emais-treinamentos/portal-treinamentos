@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { supabase } from './supabase';
 
 // Toda regra mora no banco. O site só chama as funções e mostra o resultado.
@@ -12,16 +12,21 @@ export function useDados<T>(carregar: () => Promise<T>, deps: unknown[] = []) {
   const [dados, setDados] = useState<T | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const ultimoPedido = useRef(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const recarregar = useCallback(async () => {
+    // Só a última consulta vale: uma resposta atrasada não pode trocar a tela depois de outra mais nova.
+    const pedido = ++ultimoPedido.current;
     setCarregando(true);
     try {
-      setDados(await carregar());
+      const novo = await carregar();
+      if (pedido !== ultimoPedido.current) return;
+      setDados(novo);
       setErro(null);
     } catch (e) {
-      setErro(textoErro(e));
+      if (pedido === ultimoPedido.current) setErro(textoErro(e));
     } finally {
-      setCarregando(false);
+      if (pedido === ultimoPedido.current) setCarregando(false);
     }
   }, deps);
   useEffect(() => { void recarregar(); }, [recarregar]);

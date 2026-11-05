@@ -13,11 +13,13 @@ export function Movimentacoes() {
   const lista = useDados(() => rpc<Linha[]>('movimentacoes_pendentes'));
   const [params] = useSearchParams();
   const [sel, setSel] = useState<string | null>(params.get('colaborador'));
+  const [concluida, setConcluida] = useState<{ nome: string; colaborador_id: string; acao: string } | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   const pendentes = (lista.dados ?? []).filter((l) => !l.decisao);
   const feitas = (lista.dados ?? []).filter((l) => l.decisao);
   const linha = lista.dados?.find((l) => l.colaborador_id === sel);
   const item = (l: Linha) => (
-    <button key={l.colaborador_id} type="button" className="item-lista" aria-current={sel === l.colaborador_id} onClick={() => setSel(l.colaborador_id)}>
+    <button key={l.colaborador_id} type="button" className="item-lista" aria-current={sel === l.colaborador_id} onClick={() => { setSel(l.colaborador_id); setConcluida(null); }}>
       <Farol cor={l.decisao ? 'verde' : 'amarelo'} />
       <span><strong>{l.nome}</strong><small>{l.cargo_anterior} para {l.cargo_atual}</small></span>
       <small>{l.decisao ? nomesAcao[l.decisao] : dataBR(l.data_movimentacao)}</small>
@@ -26,6 +28,12 @@ export function Movimentacoes() {
   return (
     <Pagina titulo="Reciclagem" apoio="Quem mudou de cargo: classifique, confira a sugestão e confirme. Total e parcial vão para A planejar em Turmas.">
       {lista.erro && <Mensagem tipo="erro">{lista.erro}</Mensagem>}
+      {erro && <Mensagem tipo="erro" aoFechar={() => setErro(null)}>{erro}</Mensagem>}
+      {concluida && (
+        <Mensagem tipo="ok" aoFechar={() => setConcluida(null)}>
+          {concluida.nome}: classificação concluída como {nomesAcao[concluida.acao]}. {concluida.acao === 'dispensa' ? <button className="link botao-link" type="button" onClick={() => void baixarTermo(concluida.colaborador_id).catch((e) => setErro(textoErro(e)))}>Baixar Termo de Dispensa</button> : 'Os treinamentos entraram em Planejar Treinamentos.'}
+        </Mensagem>
+      )}
       {lista.carregando && !lista.dados && <Carregando />}
       <div className="mestre-detalhe">
         <div>
@@ -33,21 +41,23 @@ export function Movimentacoes() {
           <div className="lista-turmas">{pendentes.map(item)}{lista.dados && !pendentes.length && <p className="vazio">Nada a classificar.</p>}</div>
           {!!feitas.length && <><p className="grupo-titulo">Classificadas ({feitas.length})</p><div className="lista-turmas">{feitas.map(item)}</div></>}
         </div>
-        {linha ? <Classificar key={linha.colaborador_id} l={linha} aoMudar={() => void lista.recarregar()} /> : <p className="vazio">Escolha uma pessoa.</p>}
+        {linha ? <Classificar key={linha.colaborador_id + (linha.decidido_em ?? '')} l={linha} aoConcluir={(acao) => { setConcluida({ nome: linha.nome, colaborador_id: linha.colaborador_id, acao }); setSel(null); void lista.recarregar(); window.scrollTo({ top: 0 }); }} /> : <p className="vazio">Escolha uma pessoa.</p>}
       </div>
     </Pagina>
   );
 }
 
-function Classificar({ l, aoMudar }: { l: Linha; aoMudar: () => void }) {
+const baixarTermo = (id: string) => rpc<SituacaoColaborador>('situacao_colaborador', { p_colaborador: id }).then(gerarTermoDispensa);
+
+function Classificar({ l, aoConcluir }: { l: Linha; aoConcluir: (acao: string) => void }) {
+  const [alterando, setAlterando] = useState(false);
   const [tipo, setTipo] = useState('');
   const [sug, setSug] = useState<Sugestao | null>(null);
   const [acao, setAcao] = useState('');
   const [parcial, setParcial] = useState<string[]>([]);
   const [erro, setErro] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
   async function escolher(t: string) {
-    setTipo(t); setSug(null); setErro(null); setOk(null);
+    setTipo(t); setSug(null); setErro(null);
     if (!t) return;
     try {
       const s = await rpc<Sugestao>('sugerir_reciclagem', { p_colaborador: l.colaborador_id, p_tipo: t });
@@ -58,10 +68,10 @@ function Classificar({ l, aoMudar }: { l: Linha; aoMudar: () => void }) {
     setErro(null);
     try {
       await rpc('confirmar_reciclagem', { p_colaborador: l.colaborador_id, p_tipo: tipo, p_acao: acao, p_treinamentos: parcial });
-      setOk(acao === 'dispensa' ? 'Dispensa confirmada. Baixe o Termo para assinatura.' : 'Confirmado. Os treinamentos entraram em A planejar.');
-      aoMudar();
+      aoConcluir(acao);
     } catch (e) { setErro(textoErro(e)); }
   }
+  const concluida = !!l.decisao && !alterando;
   return (
     <aside className="painel">
       <h2>{l.nome}</h2>
@@ -70,10 +80,21 @@ function Classificar({ l, aoMudar }: { l: Linha; aoMudar: () => void }) {
         <div><dt>Cargo atual</dt><dd>{l.cargo_atual}</dd></div>
         <div><dt>Movimentação</dt><dd>{dataBR(l.data_movimentacao)}</dd></div>
       </dl>
-      {l.decisao && <p className="aviso aviso-info">Decisão atual: {nomesAcao[l.decisao]}, em {dataBR(l.decidido_em)}. Uma nova confirmação substitui esta.</p>}
+      {concluida && (
+        <>
+          <p className="aviso aviso-ok" role="status">Classificação concluída: <strong>{nomesAcao[l.decisao!]}</strong>, em {dataBR(l.decidido_em)}.</p>
+          {erro && <p className="aviso aviso-erro" role="alert">{erro}</p>}
+          <div className="linha-acoes">
+            {l.decisao === 'dispensa' && <button className="botao" type="button" onClick={() => void baixarTermo(l.colaborador_id).catch((e) => setErro(textoErro(e)))}>Baixar Termo de Dispensa</button>}
+            <button className="botao botao-secundario" type="button" onClick={() => setAlterando(true)}>Alterar classificação</button>
+          </div>
+        </>
+      )}
+      {!concluida && (
+        <>
+          {l.decisao && <p className="aviso aviso-info">Decisão atual: {nomesAcao[l.decisao]}, em {dataBR(l.decidido_em)}. Uma nova confirmação substitui esta.</p>}
       <Campo rotulo="Tipo de movimentação"><select value={tipo} onChange={(e) => void escolher(e.target.value)}><option value="">Escolha</option>{Object.entries(nomesMovimentacao).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Campo>
       {erro && <p className="aviso aviso-erro" role="alert">{erro}</p>}
-      {ok && <p className="aviso aviso-ok" role="status">{ok}</p>}
       {sug && (
         <>
           <p className="aviso aviso-info">Sugestão do sistema: <strong>{nomesAcao[sug.acao_sugerida]}</strong>. {sug.tempo_empresa_meses} meses de empresa, movimentação {sug.movimentacao_recente ? 'recente' : 'não recente'}.</p>
@@ -86,7 +107,9 @@ function Classificar({ l, aoMudar }: { l: Linha; aoMudar: () => void }) {
           <div className="linha-acoes"><button className="botao" type="button" onClick={() => void confirmar()}>Confirmar classificação</button></div>
         </>
       )}
-      {l.decisao === 'dispensa' && <div className="linha-acoes"><button className="botao botao-secundario" type="button" onClick={() => void rpc<SituacaoColaborador>('situacao_colaborador', { p_colaborador: l.colaborador_id }).then(gerarTermoDispensa).catch((e) => setErro(textoErro(e)))}>Baixar Termo de Dispensa</button></div>}
+          {alterando && <div className="linha-acoes"><button className="botao botao-discreto" type="button" onClick={() => setAlterando(false)}>Cancelar alteração</button></div>}
+        </>
+      )}
     </aside>
   );
 }
