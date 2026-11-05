@@ -4,14 +4,14 @@ import { dataBR, rpc, useDados } from '../lib/api';
 import { supabase } from '../lib/supabase';
 
 const nomes: Record<string, string> = {
-  aviso_instrutor: 'Aviso ao instrutor', avaliacao_treinamento: 'Pedido de avaliação ao colaborador', assinatura_solicitada: 'Pedido de assinatura ao colaborador', assinatura_concluida: 'Documento assinado, aviso a Gente e Gestão', aviso_decisao: 'Aviso de alteração ou decisão', aviso_cancelamento: 'Aviso de cancelamento', lembrete_agenda: 'Lembrete de agenda', lembrete_presenca: 'Lembrete de presença',
-  calendario_criar: 'Criar convite no calendário', calendario_atualizar: 'Atualizar convite no calendário', calendario_cancelar: 'Cancelar convite no calendário',
+  aviso_instrutor: 'Confirmar agenda', lembrete_1h: 'Lembrete antes do treinamento', aviso_presenca: 'Confirmar presença', lembrete_agenda: 'Agenda sem resposta', lembrete_presenca: 'Presença pendente', aviso_decisao: 'Treinamento atualizado', aviso_cancelamento: 'Treinamento cancelado',
+  avaliacao_treinamento: 'Avaliar o treinamento', assinatura_solicitada: 'Assinar documento', assinatura_concluida: 'Documento assinado',
 };
 
 export function Envios() {
   const l = useDados(async () => (await supabase.from('notificacoes').select('id, tipo, destinatario, status, tentativas, erro, criado_em, turmas(treinamentos(nome))').order('criado_em', { ascending: false }).limit(200)).data ?? []);
   return (
-    <Pagina titulo="Envios" apoio="Fila de avisos e convites. No teste inicial o n8n ainda não está ligado, então tudo fica como pendente.">
+    <Pagina titulo="Envios" apoio="Fila de e-mails. Enquanto o n8n não estiver ligado, tudo fica como pendente. Os textos ficam em Acessos, na aba E-mails.">
       {l.erro && <Mensagem tipo="erro">{l.erro}</Mensagem>}
       {l.carregando && !l.dados && <Carregando />}
       {l.dados && !l.dados.length && <p className="vazio">Nenhum envio ainda.</p>}

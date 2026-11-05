@@ -12,8 +12,8 @@ import { useSessao } from '../lib/sessao';
 type Linha = { id: string; nome: string; cargo: string | null; departamento: string | null; ativo: boolean; data_referencia: string | null; total: number; realizados: number; agendados: number; pendentes: number; classificar: boolean; farol: string; motivo: string };
 
 export function Colaboradores() {
-  const { usuario } = useSessao();
-  const admin = usuario?.perfil === 'admin';
+  const { perfilAtivo } = useSessao();
+  const admin = perfilAtivo === 'admin';
   const lista = useDados(() => rpc<Linha[]>('painel_colaboradores'));
   const [busca, setBusca] = useState('');
   const [farol, setFarol] = useState('todos');
@@ -25,7 +25,7 @@ export function Colaboradores() {
   const deps = [...new Set((lista.dados ?? []).map((c) => c.departamento).filter(Boolean))] as string[];
   const conta = (f: string) => (lista.dados ?? []).filter((c) => c.farol === f).length;
   return (
-    <Pagina titulo={usuario?.perfil === 'gestor' ? 'Minha equipe' : 'Colaboradores'} apoio="Situação de cada pessoa em relação à própria matriz." acoes={admin ? <button className="botao" type="button" onClick={() => setNovo(true)}>Novo colaborador</button> : undefined}>
+    <Pagina titulo={perfilAtivo === 'gestor' ? 'Minha equipe' : 'Colaboradores'} apoio="Situação de cada pessoa em relação à própria matriz." acoes={admin ? <button className="botao" type="button" onClick={() => setNovo(true)}>Novo colaborador</button> : undefined}>
       {lista.erro && <Mensagem tipo="erro">{lista.erro}</Mensagem>}
       {lista.carregando && !lista.dados && <Carregando />}
       <div className="chips chips-filtro" role="group" aria-label="Filtrar por farol">

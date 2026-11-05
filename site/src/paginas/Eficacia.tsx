@@ -8,7 +8,7 @@ import { gerarF109, nomesResultado, type DocumentoEficacia } from '../lib/docume
 import { useSessao } from '../lib/sessao';
 
 type Linha = { colaborador_id: string; nome: string; cargo: string | null; departamento: string | null; data_admissao: string; data_prevista: string; realizados: number; total: number; situacao: 'a_avaliar' | 'aguardando' | 'avaliada'; avaliacao_id: string | null; data_avaliacao: string | null; avaliador: string | null; resultado: string | null; observacoes: string | null };
-const abas: [Linha['situacao'], string][] = [['a_avaliar', 'A avaliar'], ['aguardando', 'Aguardando 90 dias'], ['avaliada', 'Avaliadas']];
+const abas: [Linha['situacao'], string][] = [['a_avaliar', 'A avaliar'], ['aguardando', 'Aguardando prazo'], ['avaliada', 'Avaliadas']];
 
 export function Eficacia() {
   const lista = useDados(() => rpc<Linha[]>('eficacia_painel'));
@@ -33,7 +33,7 @@ export function Eficacia() {
     } catch (e) { setErro(textoErro(e)); }
   }
   return (
-    <Pagina titulo="Avaliação de Eficácia" apoio="Uma avaliação por colaborador, 90 dias depois da admissão. Baixe o F.109 para arquivamento.">
+    <Pagina titulo="Avaliação de Eficácia" apoio="Uma avaliação por colaborador, depois do prazo contado da admissão. Baixe o F.109 para arquivamento.">
       {lista.erro && <Mensagem tipo="erro">{lista.erro}</Mensagem>}
       {erro && <Mensagem tipo="erro" aoFechar={() => setErro(null)}>{erro}</Mensagem>}
       {msg && <Mensagem tipo="ok" aoFechar={() => setMsg(null)}>{msg}</Mensagem>}

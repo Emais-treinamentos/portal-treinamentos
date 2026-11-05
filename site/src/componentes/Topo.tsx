@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useSessao, nomesPerfil } from '../lib/sessao';
 import { rpc, useDados } from '../lib/api';
 import { Icone, Rosto, type NomeIcone } from './Pecas';
@@ -13,8 +13,9 @@ function AvisoAvaliacoes() {
 }
 
 export function Topo() {
-  const { usuario, sair } = useSessao();
-  const p = usuario?.perfil;
+  const { usuario, perfilAtivo, opcoesPerfil, escolherPerfil, sair } = useSessao();
+  const navegar = useNavigate();
+  const p = perfilAtivo;
   const admin = p === 'admin';
   const instrutor = p === 'instrutor';
   const itens: [string, string, NomeIcone, boolean][] = [
@@ -51,7 +52,7 @@ export function Topo() {
       {usuario && (
         <div className="lateral-usuario">
           <Rosto nome={usuario.nome} className="rosto-menta rosto-menor" />
-          <span className="lateral-nome">{usuario.nome}<small>{nomesPerfil[usuario.perfil]}</small></span>
+          <span className="lateral-nome">{usuario.nome}<small>{p ? nomesPerfil[p] : ''}</small>{opcoesPerfil.length > 1 && <button className="lateral-trocar" type="button" onClick={() => { escolherPerfil(null); navegar('/', { replace: true }); }}>Trocar perfil</button>}</span>
           <button className="botao botao-discreto" type="button" onClick={sair}>Sair</button>
         </div>
       )}

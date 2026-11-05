@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Pagina, Mensagem } from '../componentes/Pagina';
@@ -11,11 +12,13 @@ type Linha = { id: string; nome: string; cargo: string | null; departamento: str
 type Assinatura = { id: string; colaborador_id: string; tipo: DocumentoAssinatura['tipo']; status: string; solicitado_em: string; assinado_em: string | null; baixado_em: string | null };
 const useAssinaturas = () => useDados(() => rpc<Assinatura[]>('assinaturas_lista'));
 const nomeDoc = { termo_dispensa: 'Termo de Dispensa', lista_presenca: 'Lista de Presença (F.109)' };
-const JANELA_ATIVOS = 30;
 const diasDesde = (d: string | null) => (d ? Math.floor((Date.now() - new Date(`${d.slice(0, 10)}T00:00:00`).getTime()) / 86400000) : null);
-const recente = (d: string | null) => { const n = diasDesde(d); return n !== null && n >= 0 && n <= JANELA_ATIVOS; };
+const lerAtivos = async () => Number((await supabase.from('parametros').select('valor').eq('chave', 'ativos_lista_dias').maybeSingle()).data?.valor) || 30;
 
 export function ListaPresenca() {
+  const janela = useDados(lerAtivos);
+  const JANELA_ATIVOS = janela.dados ?? 30;
+  const recente = (d: string | null) => { const n = diasDesde(d); return n !== null && n >= 0 && n <= JANELA_ATIVOS; };
   const lista = useDados(() => rpc<Linha[]>('painel_colaboradores'));
   const [aba, setAba] = useState<'ativos' | 'historico'>('ativos');
   const [busca, setBusca] = useState('');

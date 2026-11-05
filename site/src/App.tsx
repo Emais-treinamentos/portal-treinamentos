@@ -6,6 +6,7 @@ import { Entrar } from './paginas/Entrar';
 import { EsqueciSenha } from './paginas/EsqueciSenha';
 import { NovaSenha } from './paginas/NovaSenha';
 import { AcessoBloqueado } from './paginas/AcessoBloqueado';
+import { EscolherPerfil } from './paginas/EscolherPerfil';
 import { Inicio } from './paginas/Inicio';
 import { Acompanhar, Formalizar, IrParaTurma } from './paginas/Turmas';
 import { Planejar } from './paginas/Planejar';
@@ -56,16 +57,17 @@ export function App() {
 }
 
 function ComLogin({ children }: { children: ReactNode }) {
-  const { situacao } = useSessao();
+  const { situacao, perfilAtivo } = useSessao();
   if (situacao === 'carregando') return <Carregando />;
   if (situacao === 'fora') return <Navigate to="/entrar" replace />;
   if (situacao === 'sem_cadastro' || situacao === 'inativo') return <AcessoBloqueado motivo={situacao} />;
+  if (!perfilAtivo) return <EscolherPerfil />;
   return <>{children}</>;
 }
 
 function SoPerfil({ perfil, children }: { perfil: Perfil[]; children: ReactNode }) {
-  const { usuario } = useSessao();
-  return <ComLogin>{usuario && perfil.includes(usuario.perfil) ? children : <Navigate to="/" replace />}</ComLogin>;
+  const { perfilAtivo } = useSessao();
+  return <ComLogin>{perfilAtivo && perfil.includes(perfilAtivo) ? children : <Navigate to="/" replace />}</ComLogin>;
 }
 
 function SoForaDoLogin({ children }: { children: ReactNode }) {

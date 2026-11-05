@@ -20,6 +20,10 @@ type ValorSessao = {
   situacao: Situacao;
   sessao: Session | null;
   usuario: Usuario | null;
+  // Perfil com que a pessoa está usando o portal agora. Null enquanto ela não escolheu.
+  perfilAtivo: Perfil | null;
+  opcoesPerfil: Perfil[];
+  escolherPerfil: (p: Perfil | null) => void;
   recuperandoSenha: boolean;
   concluirRecuperacao: () => void;
   sair: () => Promise<void>;
@@ -34,12 +38,38 @@ export const nomesPerfil: Record<Perfil, string> = {
   instrutor: 'Instrutor',
 };
 
+// Gestor e Gente e Gestão também podem ser instrutores: escolhem com qual perfil entrar.
+const opcoesDe = (p: Perfil | undefined): Perfil[] => {
+  if (p === 'admin') return ['admin', 'instrutor'];
+  if (p === 'gestor') return ['gestor', 'instrutor'];
+  return p ? [p] : [];
+};
+
+const CHAVE_PERFIL = 'portal-treinamentos-perfil';
+function lerEscolha(uid: string): Perfil | null {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(CHAVE_PERFIL) ?? 'null') as { uid: string; perfil: Perfil } | null;
+    return v?.uid === uid ? v.perfil : null;
+  } catch {
+    return null;
+  }
+}
+function gravarEscolha(uid: string | null, perfil: Perfil | null) {
+  try {
+    if (uid && perfil) sessionStorage.setItem(CHAVE_PERFIL, JSON.stringify({ uid, perfil }));
+    else sessionStorage.removeItem(CHAVE_PERFIL);
+  } catch {
+    // Sem armazenamento, a escolha vale enquanto a página estiver aberta.
+  }
+}
+
 export function ProvedorSessao({ children }: { children: ReactNode }) {
   const [sessaoLida, setSessaoLida] = useState(false);
   const [sessao, setSessao] = useState<Session | null>(null);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [situacao, setSituacao] = useState<Situacao>('carregando');
   const [recuperandoSenha, setRecuperandoSenha] = useState(false);
+  const [escolhido, setEscolhido] = useState<Perfil | null>(null);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((evento, novaSessao) => {
@@ -78,6 +108,7 @@ export function ProvedorSessao({ children }: { children: ReactNode }) {
           return;
         }
         setUsuario(data as Usuario);
+        setEscolhido(lerEscolha(data.id));
         setSituacao(data.ativo ? 'ok' : 'inativo');
       });
     return () => {
@@ -85,13 +116,24 @@ export function ProvedorSessao({ children }: { children: ReactNode }) {
     };
   }, [sessaoLida, uid]);
 
+  const opcoesPerfil = opcoesDe(usuario?.perfil);
+  const perfilAtivo = opcoesPerfil.length === 1 ? opcoesPerfil[0] : escolhido && opcoesPerfil.includes(escolhido) ? escolhido : null;
+
   const valor: ValorSessao = {
     situacao,
     sessao,
     usuario,
+    perfilAtivo,
+    opcoesPerfil,
+    escolherPerfil: (p) => {
+      setEscolhido(p);
+      gravarEscolha(usuario?.id ?? null, p);
+    },
     recuperandoSenha,
     concluirRecuperacao: () => setRecuperandoSenha(false),
     sair: async () => {
+      gravarEscolha(null, null);
+      setEscolhido(null);
       await supabase.auth.signOut();
       setRecuperandoSenha(false);
     },

@@ -2445,3 +2445,39 @@ h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
 .assinatura-campo canvas { display: block; width: 100%; aspect-ratio: 3 / 1; background: #fff; border: 1px solid #a9bab5; border-radius: 12px; touch-action: none; cursor: crosshair; }
 .assinatura-rodape { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .assinatura-rodape small { color: var(--suave); }
+
+/* Escolha de perfil */
+.apoio-formulario { margin: 0; color: var(--suave); }
+.perfis-opcoes { display: grid; gap: 10px; }
+.perfil-opcao { width: 100%; min-height: 72px; padding: 14px 16px; text-align: left; font: inherit; color: inherit; background: var(--superficie); border: 1px solid var(--linha); border-radius: 14px; cursor: pointer; display: grid; gap: 2px; }
+.perfil-opcao:hover, .perfil-opcao:focus-visible { border-color: var(--petroleo); background: #f2f8f7; }
+.perfil-opcao small { color: var(--suave); font-size: 14px; }
+.lateral-trocar { display: block; padding: 2px 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--petroleo); cursor: pointer; text-align: left; }
+.lateral-trocar:hover { text-decoration: underline; }
+
+/* Regras e modelos de e-mail */
+.regras { display: grid; gap: 24px; }
+.regras-grupo h2, .modelo-previa h2 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+.regra { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 24px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--linha); }
+.regra-texto label { display: block; font-weight: 500; }
+.regra-texto small { color: var(--suave); font-size: 14px; }
+.regra-campo { display: flex; align-items: center; gap: 8px; }
+.regra-campo input { width: 110px; min-height: 40px; padding: 0 10px; font: inherit; border: 1px solid var(--linha-forte, #a9bab5); border-radius: 8px; background: #fff; }
+.regra-campo input[type='date'] { width: 160px; }
+.regra-campo input[type='url'] { width: min(360px, 60vw); }
+.regra-ok, .regra-erro { grid-column: 1 / -1; margin: 0; font-size: 14px; text-align: right; }
+.regra-ok { color: #00514f; }
+.regra-erro { color: #8f2a1a; }
+.item-modelo { grid-template-columns: minmax(0, 1fr) auto; }
+.modelo-form { display: grid; gap: 14px; min-width: 0; }
+.modelo-form textarea, .modelo-form input:not([type='checkbox']) { width: 100%; box-sizing: border-box; }
+.modelo-campos { margin: 0; font-size: 14px; color: var(--suave); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.modelo-campos code { padding: 2px 6px; border-radius: 6px; background: #eef3f1; color: var(--texto, #1d2f2c); font-size: 13px; }
+.modelo-previa { padding: 14px 16px; border: 1px solid var(--linha); border-radius: 14px; background: #f6f8f7; }
+.modelo-previa p { margin: 6px 0 0; }
+.modelo-corpo { white-space: pre-line; }
+@media (max-width: 720px) {
+  .regra { grid-template-columns: minmax(0, 1fr); }
+  .regra-ok, .regra-erro { text-align: left; }
+  .regra-campo { flex-wrap: wrap; }
+}

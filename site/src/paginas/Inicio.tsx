@@ -15,10 +15,10 @@ const acoes: Record<string, string> = { eficacia: 'Avaliar', assinatura: 'Baixar
 const ordem = ['eficacia', 'assinatura', 'solicitacao', 'replanejar', 'envio', 'presenca', 'formalizar', 'movimentacao'];
 
 export function Inicio() {
-  const { usuario } = useSessao();
-  if (usuario?.perfil === 'gestor') return <Navigate to="/colaboradores" replace />;
-  if (usuario?.perfil === 'colaborador') return <Navigate to="/meu-calendario" replace />;
-  if (usuario?.perfil === 'instrutor') return <Navigate to="/agenda" replace />;
+  const { usuario, perfilAtivo } = useSessao();
+  if (perfilAtivo === 'gestor') return <Navigate to="/colaboradores" replace />;
+  if (perfilAtivo === 'colaborador') return <Navigate to="/meu-calendario" replace />;
+  if (perfilAtivo === 'instrutor') return <Navigate to="/agenda" replace />;
   return <Painel nome={usuario?.nome ?? ''} />;
 }
 

@@ -80,7 +80,7 @@ select formalizar_turma((select v from ctx where k='t1'));
 insert into ctx select 'dup', criar_turma((select id from treinamentos where nome='Código de Ética'),'admissao',current_date+40,'09:00',null,'instrutor.teste@example.com',array[(select v from ctx where k='c_jr')]);
 select teste.ok('quem já está em turma aberta do treinamento não é convocado de novo', not exists (select 1 from turma_participantes where turma_id=(select v from ctx where k='dup') and situacao='convocado' and colaborador_id in (select colaborador_id from turma_participantes where turma_id=(select v from ctx where k='t1'))));
 select cancelar_turma((select v from ctx where k='dup'),'Teste');
-select teste.ok('convite vira notificação de calendário', exists (select 1 from notificacoes where tipo='calendario_criar' and turma_id=(select v from ctx where k='t1')));
+select teste.ok('convite do Outlook sai do portal: nenhum e-mail de calendário', not exists (select 1 from notificacoes where tipo like 'calendario_%'));
 select teste.falha('presença só abre no horário', $q$select marcar_presenca((select v from ctx where k='t1'),(select id from colaboradores where nome='Clara Teste'),'presente')$q$);
 
 -- Alteração depois do convite: mesma turma, evento atualizado.
@@ -90,7 +90,7 @@ select teste.falha('só uma solicitação aberta', $q$select solicitar_alteracao
 select teste.como('gestao.teste@example.com');
 select decidir_solicitacao((select id from turma_solicitacoes where turma_id=(select v from ctx where k='t1')),true,'Ok');
 select teste.ok('mesma turma com nova data', (select data='2031-05-05' and hora_inicio='10:00' and status='convite_enviado' from turmas where id=(select v from ctx where k='t1')));
-select teste.ok('calendário atualizado na fila', exists (select 1 from notificacoes where tipo='calendario_atualizar' and turma_id=(select v from ctx where k='t1')));
+select teste.ok('alteração avisa o instrutor', exists (select 1 from notificacoes where tipo='aviso_decisao' and turma_id=(select v from ctx where k='t1')));
 
 -- Pessoa admitida depois do convite entra sozinha; saiu, sai.
 select salvar_colaborador(null,'Nova Teste',null,(select v from ctx where k='c_jr'),current_date);
@@ -117,7 +117,7 @@ select teste.ok('ausente volta para a planejar', exists (select 1 from a_planeja
 -- Cancelar: nada pendente continua.
 select cancelar_turma((select v from ctx where k='t1'),'Teste');
 select teste.ok('notificações pendentes canceladas', not exists (select 1 from notificacoes where turma_id=(select v from ctx where k='t1') and status='pendente' and tipo='calendario_atualizar'));
-select teste.ok('cancelamento do calendário na fila', exists (select 1 from notificacoes where turma_id=(select v from ctx where k='t1') and status='pendente' and tipo='calendario_cancelar'));
+select teste.ok('cancelamento avisa o instrutor', exists (select 1 from notificacoes where turma_id=(select v from ctx where k='t1') and status='pendente' and tipo='aviso_cancelamento'));
 
 -- Matriz
 insert into ctx select 'tr', id from treinamentos where nome='LGPD no dia a dia';
@@ -208,5 +208,62 @@ select teste.como('gestao.teste@example.com');
 select teste.ok('treinamento novo, como reciclagem, não abre outra avaliação', (select count(*)=1 and bool_and(situacao='avaliada') from eficacia_painel() where nome='Erica Teste'));
 select teste.ok('quem foi dispensado não entra', not exists (select 1 from eficacia_painel() where nome='Paula Teste'));
 reset role;
+
+-- Regras editáveis e fluxo único de e-mails
+select teste.ok('nada de e-mail de calendário na fila', not exists (select 1 from notificacoes where tipo like 'calendario_%' and status in ('pendente','erro')));
+select teste.como('gestao.teste@example.com');
+update parametros set valor='20' where chave='janela_convocacao_dias';
+select teste.ok('Gente e Gestão altera a janela', app.param_int('janela_convocacao_dias')=20);
+update parametros set valor='15' where chave='janela_convocacao_dias';
+select teste.falha('regra fora do limite', $q$update parametros set valor='0' where chave='janela_convocacao_dias'$q$);
+select teste.falha('regra que não é número', $q$update parametros set valor='abc' where chave='prazo_eficacia_dias'$q$);
+select teste.falha('data inválida', $q$update parametros set valor='31/31/2026' where chave='eficacia_admissao_desde'$q$);
+select teste.falha('modelo com campo inexistente', $q$update modelos_email set corpo='Oi {nome}' where tipo='lembrete_1h'$q$);
+update modelos_email set assunto='Lembrete de {treinamento} às {inicio}' where tipo='lembrete_1h';
+select teste.como('instrutor.teste@example.com');
+select teste.ok('instrutor não lê modelos', not exists (select 1 from modelos_email));
+select teste.falha('instrutor não altera regras', $q$do $x$ begin update parametros set valor='20' where chave='janela_convocacao_dias'; if not found then raise exception 'sem efeito'; end if; end $x$$q$);
+select teste.falha('logado não busca a fila', $q$select notificacoes_para_envio()$q$);
+reset role;
+create temp table f as select now() as a;
+do $x$
+declare v_t uuid; v_e jsonb; v_n integer; v_i text := 'instrutor.teste@example.com';
+begin
+  select t.id into v_t from turmas t where t.status = 'convite_enviado' limit 1;
+  if v_t is null then
+    insert into turmas (treinamento_id, status, data, hora_inicio, sala, instrutor_email) select id, 'convite_enviado', current_date, '09:00', 'Time <Forte>', v_i from treinamentos limit 1 returning id into v_t;
+    insert into turma_participantes (turma_id, colaborador_id) select v_t, id from colaboradores where ativo limit 2;
+  end if;
+  -- começa daqui a 30 minutos
+  update turmas set instrutor_email = v_i, sala = 'Time <Forte>', presenca_concluida_em = null, data = (now() at time zone 'America/Sao_Paulo')::date, hora_inicio = ((now() + interval '30 minutes') at time zone 'America/Sao_Paulo')::time where id = v_t;
+  v_e := notificacoes_para_envio(500);
+  select count(*) into v_n from notificacoes where tipo = 'lembrete_1h' and turma_id = v_t;
+  perform teste.ok('lembrete sai antes do início', v_n = 1);
+  perform notificacoes_para_envio(500);
+  select count(*) into v_n from notificacoes where tipo = 'lembrete_1h' and turma_id = v_t;
+  perform teste.ok('lembrete não repete', v_n = 1);
+  select x into v_e from jsonb_array_elements(notificacoes_para_envio(500)) x where x->>'tipo' = 'lembrete_1h' limit 1;
+  perform teste.ok('e-mail traz treinamento no assunto', v_e->>'assunto' like 'Lembrete de % às %');
+  perform teste.ok('e-mail traz participantes', exists (select 1 from turma_participantes p join colaboradores c on c.id = p.colaborador_id where p.turma_id = v_t and v_e->>'corpo_html' like '%' || c.nome || '%'));
+  perform teste.ok('e-mail protege o HTML', v_e->>'corpo_html' like '%Time &lt;Forte&gt;%');
+  perform registrar_envio((v_e->>'id')::uuid, true);
+  -- muda o horário: novo lembrete
+  update turmas set hora_inicio = ((now() + interval '45 minutes') at time zone 'America/Sao_Paulo')::time where id = v_t;
+  perform notificacoes_para_envio(500);
+  select count(*) into v_n from notificacoes where tipo = 'lembrete_1h' and turma_id = v_t;
+  perform teste.ok('novo horário gera novo lembrete', v_n = 2);
+  -- terminou faz 5 minutos: aviso de presença com o mesmo cuidado de não repetir
+  update turmas set hora_inicio = ((now() - interval '5 minutes') at time zone 'America/Sao_Paulo')::time - make_interval(mins => (select carga_minutos from treinamentos where id = treinamento_id)) where id = v_t;
+  perform notificacoes_para_envio(500);
+  perform notificacoes_para_envio(500);
+  select count(*) into v_n from notificacoes where tipo = 'aviso_presenca' and turma_id = v_t;
+  perform teste.ok('aviso de presença depois do fim, sem repetir', v_n = 1);
+  perform teste.ok('lembrete vencido é descartado', not exists (select 1 from notificacoes where tipo = 'lembrete_1h' and turma_id = v_t and status = 'pendente'));
+  -- modelo desligado não envia
+  update modelos_email set ativo = false where tipo = 'aviso_presenca';
+  perform notificacoes_para_envio(500);
+  perform teste.ok('modelo desligado cancela o aviso', not exists (select 1 from notificacoes where tipo = 'aviso_presenca' and turma_id = v_t and status = 'pendente'));
+  update modelos_email set ativo = true where tipo = 'aviso_presenca';
+end $x$;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);
