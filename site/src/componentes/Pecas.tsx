@@ -53,6 +53,7 @@ const icones = {
   planejar: 'M9 3h6v4H9zM9 5H5v16h14V5h-4M8 12h8M8 16h5',
   lista: 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2',
   turmas: 'M4 5h16v16H4zM4 10h16M8 3v4M16 3v4',
+  eficacia: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12l3 3 5-6',
   estrela: 'M12 3l2.7 5.6 6.1.8-4.5 4.2 1.2 6.1-5.5-3-5.5 3 1.2-6.1-4.5-4.2 6.1-.8z',
   perfil: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 21v-1a7 7 0 0 1 14 0v1',
   minhas: 'M4 4h16v16H4zM8 12l3 3 5-6',

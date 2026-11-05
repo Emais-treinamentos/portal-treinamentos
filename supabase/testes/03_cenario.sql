@@ -177,6 +177,30 @@ select teste.ok('grade concluída vai sozinha para assinatura', exists (select 1
 select app.solicitar_lista_se_concluida(id) from colaboradores where nome='Vera Teste';
 select teste.ok('não repete a mesma lista', (select count(*) from documentos_assinatura d join colaboradores c on c.id=d.colaborador_id where c.nome='Vera Teste' and d.tipo='lista_presenca') = 1);
 select teste.como('gestao.teste@example.com');
+
+-- Avaliação de Eficácia
+reset role;
+insert into cargos (nome, departamento_id) select 'CARGO EFICACIA', id from departamentos where nome='COMERCIAL';
+insert into matriz_vinculos (cargo_id, treinamento_id, revisao_criacao_id) select (select id from cargos where nome='CARGO EFICACIA'), (select id from treinamentos where nome='Código de Ética'), (select id from matriz_revisoes where numero='REV-INICIAL');
+insert into colaboradores (nome, cargo_id, departamento_id, data_admissao) select n, (select id from cargos where nome='CARGO EFICACIA'), (select id from departamentos where nome='COMERCIAL'), current_date - 400 from unnest(array['Erica Teste','Breno Teste']) n;
+insert into turmas (treinamento_id, status, data, hora_inicio, hora_opcao_1, sala, instrutor_email, presenca_concluida_em) select (select id from treinamentos where nome='Código de Ética'), 'realizada', d, '09:00', '09:00', 'Time Forte', 'instrutor.teste@example.com', now() from unnest(array[current_date - 120, current_date - 10]) d;
+insert into turma_participantes (turma_id, colaborador_id, situacao, cargo_na_data_id) select t.id, c.id, 'presente', c.cargo_id from colaboradores c join turmas t on t.data = case c.nome when 'Erica Teste' then current_date - 120 else current_date - 10 end and t.status = 'realizada' and t.sala = 'Time Forte' and t.hora_inicio = '09:00' and t.treinamento_id = (select id from treinamentos where nome='Código de Ética') where c.nome in ('Erica Teste','Breno Teste');
+select teste.como('colaborador.teste@example.com');
+select teste.falha('colaborador não vê a eficácia', $q$select * from eficacia_painel()$q$);
+select teste.como('gestao.teste@example.com');
+select teste.ok('passou de 90 dias fica a avaliar', (select situacao='a_avaliar' from eficacia_painel() where nome='Erica Teste'));
+select teste.ok('antes de 90 dias fica aguardando', (select situacao='aguardando' from eficacia_painel() where nome='Breno Teste'));
+select teste.ok('a avaliar aparece no Dashboard', exists (select 1 from fila_inicio() where grupo='eficacia' and titulo like 'Erica%'));
+select teste.falha('não avalia antes de 90 dias', $q$select salvar_eficacia((select id from colaboradores where nome='Breno Teste'), current_date, 'Avaliador', 'eficaz')$q$);
+select teste.falha('resultado parcial exige observação', $q$select salvar_eficacia((select id from colaboradores where nome='Erica Teste'), current_date, 'Avaliador', 'parcial')$q$);
+select teste.falha('data futura é recusada', $q$select salvar_eficacia((select id from colaboradores where nome='Erica Teste'), current_date + 1, 'Avaliador', 'eficaz')$q$);
+insert into ctx select 'ef', salvar_eficacia((select id from colaboradores where nome='Erica Teste'), current_date, 'Avaliador Teste', 'eficaz');
+select teste.ok('avaliada sai do Dashboard', not exists (select 1 from fila_inicio() where grupo='eficacia' and titulo like 'Erica%'));
+select teste.ok('avaliada aparece uma vez', (select count(*)=1 and bool_and(situacao='avaliada') from eficacia_painel() where nome='Erica Teste'));
+select teste.falha('não avalia o mesmo ciclo duas vezes', $q$select salvar_eficacia((select id from colaboradores where nome='Erica Teste'), current_date, 'Avaliador', 'eficaz')$q$);
+select salvar_eficacia((select id from colaboradores where nome='Erica Teste'), current_date, 'Avaliador Teste', 'parcial', 'Precisa reforço', (select v from ctx where k='ef'));
+select teste.ok('correção fica registrada', (eficacia_documento((select v from ctx where k='ef'))->>'resultado')='parcial');
+select teste.ok('quem foi dispensado não entra', not exists (select 1 from eficacia_painel() where nome='Paula Teste'));
 reset role;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);

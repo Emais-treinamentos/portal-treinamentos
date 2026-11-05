@@ -4,7 +4,7 @@ import { Pagina, Mensagem } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { SeloSituacao } from '../componentes/Pecas';
 import { cargaTexto, dataBR, rpc, textoErro, useDados, type SituacaoColaborador } from '../lib/api';
-import { baixarDocumentoAssinatura, gerarF109, gerarGrade, gerarTermoDispensa, type DocumentoAssinatura } from '../lib/documentos';
+import { baixarDocumentoAssinatura, gerarF109, gerarGrade, gerarTermoDispensa, nomesResultado, type DocumentoAssinatura, type Eficacia } from '../lib/documentos';
 
 type Linha = { id: string; nome: string; cargo: string | null; departamento: string | null; ativo: boolean; data_referencia: string | null; total: number; realizados: number; pendentes: number; motivo: string };
 
@@ -133,6 +133,7 @@ function BlocoAssinatura({ s, dispensa, emAberto, docs, aoMudar, aoAvisar, aoErr
 function Documento({ id, aoVoltar }: { id: string; aoVoltar: () => void }) {
   const d = useDados(() => rpc<SituacaoColaborador>('situacao_colaborador', { p_colaborador: id }), [id]);
   const assinaturas = useAssinaturas();
+  const ef = useDados(() => rpc<Eficacia | null>('eficacia_do_colaborador', { p_colaborador: id }), [id]);
   const [msg, setMsg] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const s = d.dados;
@@ -146,7 +147,7 @@ function Documento({ id, aoVoltar }: { id: string; aoVoltar: () => void }) {
       {erro && <Mensagem tipo="erro">{erro}</Mensagem>}
       <div className="linha-acoes doc-acoes">
         <button className="botao botao-discreto" type="button" onClick={aoVoltar}>Voltar à lista</button>
-        {s && !dispensa && <button className="botao" type="button" onClick={() => void doc(() => gerarF109(s))}>Exportar PDF</button>}
+        {s && !dispensa && <button className="botao" type="button" onClick={() => void doc(() => gerarF109(s, undefined, ef.dados ?? undefined))}>Exportar PDF</button>}
         {s && <button className="botao botao-secundario" type="button" onClick={() => void doc(() => gerarGrade(s))}>Grade de treinamentos</button>}
         {s && dispensa && <button className="botao botao-secundario" type="button" onClick={() => void doc(() => gerarTermoDispensa(s))}>Termo de Dispensa</button>}
       </div>
@@ -194,7 +195,7 @@ function Documento({ id, aoVoltar }: { id: string; aoVoltar: () => void }) {
               <strong>Avaliação de Eficácia</strong>
               <small>(Preencher após 90 dias da conclusão dos treinamentos)</small>
               <table><tbody>
-                <tr><th>Data da Avaliação</th><td>&nbsp;</td></tr><tr><th>Avaliador</th><td>&nbsp;</td></tr><tr><th>Resultado</th><td>&nbsp;</td></tr><tr><th>Observações</th><td className="doc-obs">&nbsp;</td></tr>
+                <tr><th>Data da Avaliação</th><td>{dataBR(ef.dados?.data_avaliacao)}&nbsp;</td></tr><tr><th>Avaliador</th><td>{ef.dados?.avaliador}&nbsp;</td></tr><tr><th>Resultado</th><td>{ef.dados ? nomesResultado[ef.dados.resultado] : ""}&nbsp;</td></tr><tr><th>Observações</th><td className="doc-obs">{ef.dados?.observacoes}&nbsp;</td></tr>
               </tbody></table>
             </div>
           </article>

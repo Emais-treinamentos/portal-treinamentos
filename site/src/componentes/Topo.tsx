@@ -24,6 +24,7 @@ export function Topo() {
     ['/formalizar', 'Formalizar Convites', 'turmas', admin],
     ['/acompanhar', 'Acompanhar Treinamentos', 'minhas', admin],
     ['/lista-presenca', 'Lista de Presença', 'lista', admin],
+    ['/eficacia', 'Avaliação de Eficácia', 'eficacia', admin],
     ['/reciclagem', 'Reciclagem', 'movimentacoes', admin],
     ['/satisfacao', 'Satisfação', 'estrela', admin],
     ['/agenda', 'Confirmar Agenda', 'minhas', instrutor],

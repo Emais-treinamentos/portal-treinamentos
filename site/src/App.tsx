@@ -13,6 +13,7 @@ import { ListaPresenca } from './paginas/ListaPresenca';
 import { CalendarioInstrutor, ConfirmarAgenda, MinhasTurmas, PresencaInstrutor } from './paginas/MinhasTurmas';
 import { MeuCalendario, MeuPerfil } from './paginas/Colaborador';
 import { Satisfacao } from './paginas/Satisfacao';
+import { Eficacia } from './paginas/Eficacia';
 import { Colaboradores } from './paginas/Colaboradores';
 import { Movimentacoes } from './paginas/Movimentacoes';
 import { Cadastros } from './paginas/Cadastros';
@@ -42,6 +43,7 @@ export function App() {
       <Route path="/agenda" element={<SoPerfil perfil={['instrutor']}><ConfirmarAgenda /></SoPerfil>} />
       <Route path="/calendario" element={<SoPerfil perfil={['instrutor']}><CalendarioInstrutor /></SoPerfil>} />
       <Route path="/presenca" element={<SoPerfil perfil={['instrutor']}><PresencaInstrutor /></SoPerfil>} />
+      <Route path="/eficacia" element={<SoPerfil perfil={['admin']}><Eficacia /></SoPerfil>} />
       <Route path="/satisfacao" element={<SoPerfil perfil={['admin']}><Satisfacao /></SoPerfil>} />
       <Route path="/lista-presenca" element={<SoPerfil perfil={gestao}><ListaPresenca /></SoPerfil>} />
       <Route path="/reciclagem" element={<SoPerfil perfil={['admin']}><Movimentacoes /></SoPerfil>} />

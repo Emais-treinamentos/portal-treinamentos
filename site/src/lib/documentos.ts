@@ -26,7 +26,11 @@ function carimbo(pdf: jsPDF, a: Assinado, x: number, y: number, w: number) {
   pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7); pdf.setTextColor(80, 80, 80); pdf.text(pdf.splitTextToSize(t, w) as string[], x, y); pdf.setTextColor(0, 0, 0);
 }
 
-export async function gerarF109(s: SituacaoColaborador, assinado?: Assinado) {
+export const nomesResultado: Record<string, string> = { eficaz: 'Eficaz', parcial: 'Parcialmente eficaz', nao_eficaz: 'Não eficaz' };
+export type Eficacia = { data_avaliacao: string; avaliador: string; resultado: string; observacoes: string | null };
+export type DocumentoEficacia = Eficacia & { conteudo: SituacaoColaborador; assinatura: (Assinado & { conteudo: SituacaoColaborador }) | null };
+
+export async function gerarF109(s: SituacaoColaborador, assinado?: Assinado, eficacia?: Eficacia) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const logo = await carregarLogo();
   const m = 10; const W = pdf.internal.pageSize.getWidth() - m * 2; const H = pdf.internal.pageSize.getHeight() - m;
@@ -81,15 +85,18 @@ export async function gerarF109(s: SituacaoColaborador, assinado?: Assinado) {
   });
   if (assinado) { pdf.addImage(assinado.assinatura_imagem, 'PNG', m + 97, fy - 2.5, 30, 10); carimbo(pdf, assinado, m + 4, fy + 13, W - 8); }
   y += assinado ? 45 : 40;
-  if (y + 70 > H) { pdf.addPage(); y = m; }
-  pdf.rect(m, y, W, 70); pdf.setFillColor(...cinza); pdf.rect(m + 4, y + 4, W - 8, 9, 'F');
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8);
+  const obsH = Math.max(21, linhas(eficacia?.observacoes ?? '', W - 58).length * 3.4 + 5);
+  if (y + 49 + obsH > H) { pdf.addPage(); y = m; }
+  pdf.rect(m, y, W, 49 + obsH); pdf.setFillColor(...cinza); pdf.rect(m + 4, y + 4, W - 8, 9, 'F');
   pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10); pdf.text('Avaliação de Eficácia', m + W / 2, y + 10.5, { align: 'center' });
-  pdf.setFont('helvetica', 'italic'); pdf.setFontSize(8); pdf.setTextColor(120, 120, 120); pdf.text('(Preencher após 90 dias da conclusão dos treinamentos)', m + 4, y + 20); pdf.setTextColor(0, 0, 0);
+  pdf.setFont('helvetica', 'italic'); pdf.setFontSize(8); pdf.setTextColor(120, 120, 120);
+  pdf.text(eficacia && assinado ? 'Preenchida por Gente e Gestão depois da assinatura do colaborador.' : '(Preencher após 90 dias da conclusão dos treinamentos)', m + 4, y + 20); pdf.setTextColor(0, 0, 0);
   let ry = y + 25;
-  [['Data da Avaliação', 8], ['Avaliador', 8], ['Resultado', 8], ['Observações', 21]].forEach(([r, h]) => {
-    celula(r as string, m + 4, ry, 50, h as number, { fill: cinza, bold: true, size: 8 }); celula('', m + 54, ry, W - 58, h as number); ry += h as number;
+  ([['Data da Avaliação', 8, dataBR(eficacia?.data_avaliacao)], ['Avaliador', 8, eficacia?.avaliador ?? ''], ['Resultado', 8, eficacia ? nomesResultado[eficacia.resultado] : ''], ['Observações', obsH, eficacia?.observacoes ?? '']] as [string, number, string][]).forEach(([r, h, v]) => {
+    celula(r, m + 4, ry, 50, h, { fill: cinza, bold: true, size: 8 }); celula(v, m + 54, ry, W - 58, h, { size: 8 }); ry += h;
   });
-  pdf.save(`F109_${nomeArquivo(c.nome)}${assinado ? '_assinado' : ''}.pdf`);
+  pdf.save(`F109_${nomeArquivo(c.nome)}${assinado ? '_assinado' : ''}${eficacia ? '_eficacia' : ''}.pdf`);
 }
 
 // Grade de treinamentos: turmas da pessoa, sem canceladas ou recusadas.
