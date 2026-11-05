@@ -11,6 +11,8 @@ import { useSessao } from '../lib/sessao';
 
 type Linha = { id: string; nome: string; cargo: string | null; departamento: string | null; ativo: boolean; data_referencia: string | null; total: number; realizados: number; agendados: number; pendentes: number; classificar: boolean; farol: string; motivo: string };
 
+const diasDesdeHoje = (d: string | null) => (d ? Math.floor((Date.now() - new Date(`${d.slice(0, 10)}T00:00:00`).getTime()) / 86400000) : null);
+
 export function Colaboradores() {
   const { perfilAtivo } = useSessao();
   const admin = perfilAtivo === 'admin';
@@ -55,14 +57,29 @@ export function Colaboradores() {
 }
 
 // Aba de Cadastros: só dados e cargo. Documentos ficam em Lista de Presença.
-export function CadastroColaboradores({ inativos = false }: { inativos?: boolean }) {
+export function CadastroColaboradores() {
   const lista = useDados(() => rpc<Linha[]>('painel_colaboradores'));
   const emails = useDados(async () => (await supabase.from('colaboradores').select('id, email')).data ?? []);
+  const janela = useDados(async () => Number((await supabase.from('parametros').select('valor').eq('chave', 'ativos_lista_dias').maybeSingle()).data?.valor) || 30);
+  const [aba, setAba] = useState<'ativos' | 'historico' | 'inativos'>('ativos');
   const [busca, setBusca] = useState('');
+  const [dep, setDep] = useState('');
   const [acao, setAcao] = useState<{ id: string; tipo: 'editar' | 'mover' | 'historico' } | null>(null);
   const [novo, setNovo] = useState(false);
+  const dias = janela.dados ?? 30;
+  const inativos = aba === 'inativos';
+  // Admissão futura também conta como recente: é quem está entrando.
+  const recente = (d: string | null) => { const n = diasDesdeHoje(d); return n !== null && n <= dias; };
   const q = busca.trim().toLowerCase();
-  const linhas = (lista.dados ?? []).filter((c) => c.ativo === !inativos && (!q || `${c.nome} ${c.cargo}`.toLowerCase().includes(q)));
+  const pessoas = (lista.dados ?? []).filter((c) => (!q || `${c.nome} ${c.cargo}`.toLowerCase().includes(q)) && (!dep || c.departamento === dep));
+  const grupos = {
+    ativos: pessoas.filter((c) => c.ativo && recente(c.data_referencia)).sort((x, y) => (y.data_referencia ?? '').localeCompare(x.data_referencia ?? '')),
+    historico: pessoas.filter((c) => c.ativo && !recente(c.data_referencia)),
+    inativos: pessoas.filter((c) => !c.ativo),
+  };
+  const linhas = grupos[aba];
+  const deps = [...new Set((lista.dados ?? []).map((c) => c.departamento).filter(Boolean))].sort() as string[];
+  const vazio = { ativos: `Ninguém entrou ou mudou de cargo nos últimos ${dias} dias.`, historico: 'Ninguém no histórico.', inativos: 'Nenhum colaborador inativo.' }[aba];
   const email = (id: string) => emails.dados?.find((e) => e.id === id)?.email;
   const fechar = () => { setAcao(null); void lista.recarregar(); void emails.recarregar(); };
   return (
@@ -71,16 +88,22 @@ export function CadastroColaboradores({ inativos = false }: { inativos?: boolean
       {lista.carregando && !lista.dados && <Carregando />}
       <div className="filtros cadastro-topo">
         <Campo rotulo="Buscar"><input type="search" placeholder="Nome ou cargo" value={busca} onChange={(e) => setBusca(e.target.value)} /></Campo>
-        {!inativos && <button className="botao" type="button" onClick={() => setNovo(true)}>Novo colaborador</button>}
+        <Campo rotulo="Departamento"><select value={dep} onChange={(e) => setDep(e.target.value)}><option value="">Todos</option>{deps.map((d) => <option key={d}>{d}</option>)}</select></Campo>
+        <button className="botao" type="button" onClick={() => setNovo(true)}>Novo colaborador</button>
+      </div>
+      <div className="chips chips-filtro" role="group" aria-label="Situação do cadastro">
+        <button type="button" className="chip" aria-pressed={aba === 'ativos'} onClick={() => setAba('ativos')}>Ativos<small>{grupos.ativos.length}</small></button>
+        <button type="button" className="chip" aria-pressed={aba === 'historico'} onClick={() => setAba('historico')}>Histórico<small>{grupos.historico.length}</small></button>
+        <button type="button" className="chip" aria-pressed={aba === 'inativos'} onClick={() => setAba('inativos')}>Inativos<small>{grupos.inativos.length}</small></button>
       </div>
       <div className="tabela-rolagem">
         <table className="tabela">
-          <thead><tr><th>Nome e e-mail</th><th>Departamento</th><th>{inativos ? 'Último cargo' : 'Cargo'}</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Nome e e-mail</th><th>Departamento</th><th>{inativos ? 'Último cargo' : 'Cargo'}</th><th>Admissão ou movimentação</th><th>Ações</th></tr></thead>
           <tbody>
-            {lista.dados && !linhas.length && <tr><td colSpan={4}>Ninguém nesta lista.</td></tr>}
+            {lista.dados && !linhas.length && <tr><td colSpan={5}>{vazio}</td></tr>}
             {linhas.map((c) => (
               <tr key={c.id}>
-                <td><strong className="celula-nome">{c.nome}</strong><small className="celula-apoio">{email(c.id)}</small></td><td>{c.departamento}</td><td>{c.cargo}</td>
+                <td><strong className="celula-nome">{c.nome}</strong><small className="celula-apoio">{email(c.id)}</small></td><td>{c.departamento}</td><td>{c.cargo}</td><td>{dataBR(c.data_referencia)}</td>
                 <td><span className="linha-acoes">
                   <button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setAcao({ id: c.id, tipo: 'editar' })}>Editar dados</button>
                   {!inativos && <button className="botao botao-secundario botao-pequeno" type="button" onClick={() => setAcao({ id: c.id, tipo: 'mover' })}>Alterar cargo</button>}

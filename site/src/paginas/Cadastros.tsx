@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase';
 
 type Treinamento = { id: string; nome: string; carga_minutos: number; eh_politica: boolean; individual_por_colaborador: boolean; ativo: boolean };
 
-const abas = [['colaboradores', 'Colaboradores'], ['inativos', 'Inativos'], ['cargos', 'Cargos'], ['treinamentos', 'Treinamentos'], ['matriz', 'Matriz'], ['departamentos', 'Departamentos'], ['salas', 'Salas']] as const;
+const abas = [['colaboradores', 'Colaboradores'], ['cargos', 'Cargos'], ['treinamentos', 'Treinamentos'], ['matriz', 'Matriz'], ['departamentos', 'Departamentos'], ['salas', 'Salas']] as const;
 type Aba = (typeof abas)[number][0];
 
 export function Cadastros() {
@@ -21,7 +21,6 @@ export function Cadastros() {
         {abas.map(([a, nome]) => <button key={a} type="button" className="chip" aria-pressed={aba === a} onClick={() => setAba(a)}>{nome}</button>)}
       </div>
       {aba === 'colaboradores' && <CadastroColaboradores />}
-      {aba === 'inativos' && <CadastroColaboradores inativos />}
       {aba === 'cargos' && <Cargos />}
       {aba === 'treinamentos' && <Treinamentos />}
       {aba === 'matriz' && <Matriz />}

@@ -18,7 +18,7 @@ const lerAtivos = async () => Number((await supabase.from('parametros').select('
 export function ListaPresenca() {
   const janela = useDados(lerAtivos);
   const JANELA_ATIVOS = janela.dados ?? 30;
-  const recente = (d: string | null) => { const n = diasDesde(d); return n !== null && n >= 0 && n <= JANELA_ATIVOS; };
+  const recente = (d: string | null) => { const n = diasDesde(d); return n !== null && n <= JANELA_ATIVOS; };
   const lista = useDados(() => rpc<Linha[]>('painel_colaboradores'));
   const [aba, setAba] = useState<'ativos' | 'historico'>('ativos');
   const [busca, setBusca] = useState('');

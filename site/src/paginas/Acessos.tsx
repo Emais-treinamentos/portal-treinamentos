@@ -107,7 +107,7 @@ type Regra = { chave: string; valor: string; descricao: string; rotulo: string |
 function Regras() {
   const l = useDados(async () => ((await supabase.from('parametros').select('*').order('ordem')).data ?? []) as Regra[]);
   const editaveis = (l.dados ?? []).filter((r) => r.tipo !== 'lista' && r.grupo);
-  const grupos = ['Planejamento', 'Reciclagem', 'Avaliação de Eficácia', 'Lista de Presença', 'E-mails'].filter((g) => editaveis.some((r) => r.grupo === g));
+  const grupos = ['Planejamento', 'Reciclagem', 'Avaliação de Eficácia', 'Colaboradores', 'E-mails'].filter((g) => editaveis.some((r) => r.grupo === g));
   return (
     <div className="regras">
       {l.erro && <Mensagem tipo="erro">{l.erro}</Mensagem>}

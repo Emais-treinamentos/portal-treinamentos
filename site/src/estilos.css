@@ -2486,3 +2486,7 @@ h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
 .remarcar-resultado { display: grid; gap: 8px; }
 .remarcar-resultado .aviso { margin: 0; display: block; }
 .remarcar-resultado ul { margin: 6px 0 0; padding-left: 18px; }
+
+/* Cadastro de colaboradores */
+.cadastro-topo input, .cadastro-topo select { height: 48px; box-sizing: border-box; }
+.tabela .celula-apoio { overflow-wrap: normal; word-break: normal; white-space: nowrap; }
