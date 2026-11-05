@@ -336,5 +336,28 @@ begin
   execute 'reset role';
   perform teste.ok('instrutor não edita', not exists (select 1 from departamentos where nome = 'Invadido') and not exists (select 1 from cargos where nome = 'Invadido'));
 end $x$;
+
+-- Departamento inativo
+do $x$
+declare v_d uuid; v_vazio uuid; v_cg uuid; v_ok boolean;
+begin
+  execute 'reset role';
+  select c.departamento_id into v_d from colaboradores c where c.ativo and c.departamento_id is not null limit 1;
+  perform teste.como('gestao.teste@example.com');
+  begin update departamentos set ativo = false where id = v_d; perform teste.ok('não inativa com gente ativa', false);
+  exception when others then perform teste.ok('não inativa com gente ativa: ' || sqlerrm, sqlerrm like '%Mova ou inative%'); end;
+  insert into departamentos (nome) values ('Departamento vazio') returning id into v_vazio;
+  update departamentos set ativo = false where id = v_vazio;
+  perform teste.ok('inativa departamento vazio', exists (select 1 from departamentos where id = v_vazio and not ativo));
+  begin insert into cargos (nome, departamento_id) values ('Cargo novo', v_vazio); perform teste.ok('sem cargo em departamento inativo', false);
+  exception when others then perform teste.ok('sem cargo em departamento inativo', sqlerrm like '%está inativo%'); end;
+  select id into v_cg from cargos where ativo limit 1;
+  begin update cargos set departamento_id = v_vazio where id = v_cg; perform teste.ok('não move cargo para departamento inativo', false);
+  exception when others then perform teste.ok('não move cargo para departamento inativo', sqlerrm like '%está inativo%'); end;
+  update departamentos set ativo = true where id = v_vazio;
+  perform teste.ok('reativa departamento', exists (select 1 from departamentos where id = v_vazio and ativo));
+  execute 'reset role';
+  delete from departamentos where id = v_vazio;
+end $x$;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);

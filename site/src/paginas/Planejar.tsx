@@ -12,7 +12,7 @@ const vazio: Agenda = { data: '', hora_1: '', hora_2: '', email: '' };
 
 export function Planejar() {
   const [params] = useSearchParams();
-  const depts = useDados(async () => (await supabase.from('departamentos').select('id, nome').order('nome')).data ?? []);
+  const depts = useDados(async () => (await supabase.from('departamentos').select('id, nome').eq('ativo', true).order('nome')).data ?? []);
   const cargos = useDados(async () => (await supabase.from('cargos').select('id, nome, departamento_id').eq('ativo', true).order('nome')).data ?? []);
   const [selDepts, setSelDepts] = useState<string[]>([]);
   const [selCargos, setSelCargos] = useState<string[]>(() => (params.get('cargos') ?? '').split(',').filter(Boolean));
