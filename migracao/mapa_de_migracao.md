@@ -14,8 +14,8 @@ O arquivo extraído tem nomes e e-mails. Ele não entra no repositório.
 | historico_cargos | 106 | movimentacoes | 8 linhas apontam para colaborador que não existe mais e ficam de fora |
 | matriz_revisoes | 26 | matriz_revisoes | Mantém número, status e vigência |
 | cargos_treinamentos | 5.837 | matriz_vinculos | Mantém revisão de criação e de remoção |
-| planejamentos | 406 | turmas (326) | Cada grupo consolidado vira uma turma. Nenhum grupo mistura treinamentos |
-| planejamento_cargos | 802 | turma_cargos | Une os cargos do grupo |
+| planejamentos | 406 | turmas (406) | Cada planejamento vira uma turma, porque em 34 dos 54 grupos consolidados a data ou o horário variam |
+| planejamento_cargos | 802 | turma_cargos | Cargos de cada turma |
 | presenca_colaborador | 707 | turma_participantes | confirmado vira presente. ausente continua ausente. Origem legado_individual |
 | confirmacao_treinamento | 699 | Só conferência | Toda confirmação com pessoa já está na presença. As outras 280 são por cargo |
 | reciclagem_decisoes | 10 | reciclagem_decisoes | Só as 6 confirmadas. As 4 pendentes o portal recalcula |
