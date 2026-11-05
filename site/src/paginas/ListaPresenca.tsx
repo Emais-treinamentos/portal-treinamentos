@@ -193,7 +193,7 @@ function Documento({ id, aoVoltar }: { id: string; aoVoltar: () => void }) {
             </div>
             <div className="doc-assinatura doc-eficacia">
               <strong>Avaliação de Eficácia</strong>
-              <small>(Preencher após 90 dias da conclusão dos treinamentos)</small>
+              <small>(Preencher após 90 dias da admissão)</small>
               <table><tbody>
                 <tr><th>Data da Avaliação</th><td>{dataBR(ef.dados?.data_avaliacao)}&nbsp;</td></tr><tr><th>Avaliador</th><td>{ef.dados?.avaliador}&nbsp;</td></tr><tr><th>Resultado</th><td>{ef.dados ? nomesResultado[ef.dados.resultado] : ""}&nbsp;</td></tr><tr><th>Observações</th><td className="doc-obs">{ef.dados?.observacoes}&nbsp;</td></tr>
               </tbody></table>

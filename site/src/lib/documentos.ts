@@ -91,7 +91,7 @@ export async function gerarF109(s: SituacaoColaborador, assinado?: Assinado, efi
   pdf.rect(m, y, W, 49 + obsH); pdf.setFillColor(...cinza); pdf.rect(m + 4, y + 4, W - 8, 9, 'F');
   pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10); pdf.text('Avaliação de Eficácia', m + W / 2, y + 10.5, { align: 'center' });
   pdf.setFont('helvetica', 'italic'); pdf.setFontSize(8); pdf.setTextColor(120, 120, 120);
-  pdf.text(eficacia && assinado ? 'Preenchida por Gente e Gestão depois da assinatura do colaborador.' : '(Preencher após 90 dias da conclusão dos treinamentos)', m + 4, y + 20); pdf.setTextColor(0, 0, 0);
+  pdf.text(eficacia && assinado ? 'Preenchida por Gente e Gestão depois da assinatura do colaborador.' : '(Preencher após 90 dias da admissão)', m + 4, y + 20); pdf.setTextColor(0, 0, 0);
   let ry = y + 25;
   ([['Data da Avaliação', 8, dataBR(eficacia?.data_avaliacao)], ['Avaliador', 8, eficacia?.avaliador ?? ''], ['Resultado', 8, eficacia ? nomesResultado[eficacia.resultado] : ''], ['Observações', obsH, eficacia?.observacoes ?? '']] as [string, number, string][]).forEach(([r, h, v]) => {
     celula(r, m + 4, ry, 50, h, { fill: cinza, bold: true, size: 8 }); celula(v, m + 54, ry, W - 58, h, { size: 8 }); ry += h;
