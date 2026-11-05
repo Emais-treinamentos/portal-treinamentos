@@ -34,15 +34,20 @@ Deno.serve(async (req) => {
     const email = String(c.email ?? '').trim().toLowerCase();
     const perfil = String(c.perfil ?? '');
     const departamentos = Array.isArray(c.departamentos) ? c.departamentos.map(String) : [];
+    const equipe = Array.isArray(c.equipe) ? [...new Set(c.equipe.map(String))] : [];
     if (nome.length < 2) return erro(400, 'Informe o nome');
     if (!EMAIL.test(email)) return erro(400, 'E-mail inválido');
     if (!PERFIS.includes(perfil)) return erro(400, 'Perfil inválido');
-    if (perfil === 'gestor' && !departamentos.length) return erro(400, 'Escolha ao menos um departamento');
+    if (perfil === 'gestor' && !departamentos.length && !equipe.length) return erro(400, 'Escolha ao menos um departamento ou colaborador');
     const { data: criado, error } = await servico.auth.admin.createUser({ email, email_confirm: true });
     if (error || !criado.user) return erro(400, /already/i.test(error?.message ?? '') ? 'Este e-mail já tem acesso' : 'Não foi possível criar o acesso');
     const { error: e2 } = await servico.from('usuarios').insert({ id: criado.user.id, nome, email, perfil, colaborador_id: c.colaborador_id || null });
     if (e2) { await servico.auth.admin.deleteUser(criado.user.id); return erro(400, 'Não foi possível criar o acesso'); }
     if (perfil === 'gestor') await servico.from('usuarios_departamentos').insert(departamentos.map((d) => ({ usuario_id: criado.user.id, departamento_id: d })));
+    if (perfil === 'gestor' && equipe.length) {
+      const { error: e3 } = await servico.from('usuarios_colaboradores').insert(equipe.map((x) => ({ usuario_id: criado.user.id, colaborador_id: x })));
+      if (e3) { await servico.auth.admin.deleteUser(criado.user.id); return erro(400, 'Não foi possível salvar a equipe do gestor'); }
+    }
     const { data: link } = await servico.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo } });
     return responder(200, { link: link?.properties?.action_link ?? null });
   }
@@ -52,10 +57,11 @@ Deno.serve(async (req) => {
     const email = String(c.email ?? '').trim().toLowerCase();
     const perfil = String(c.perfil ?? '');
     const departamentos = Array.isArray(c.departamentos) ? c.departamentos.map(String) : [];
+    const equipe = Array.isArray(c.equipe) ? [...new Set(c.equipe.map(String))] : [];
     if (nome.length < 2) return erro(400, 'Informe o nome');
     if (!EMAIL.test(email)) return erro(400, 'E-mail inválido');
     if (!PERFIS.includes(perfil)) return erro(400, 'Perfil inválido');
-    if (perfil === 'gestor' && !departamentos.length) return erro(400, 'Escolha ao menos um departamento');
+    if (perfil === 'gestor' && !departamentos.length && !equipe.length) return erro(400, 'Escolha ao menos um departamento ou colaborador');
     if (id === quem.user.id && perfil !== 'admin') return erro(400, 'Você não pode tirar o seu próprio perfil de Gente e Gestão');
     const { data: atual } = await servico.from('usuarios').select('email').eq('id', id).maybeSingle();
     if (!atual) return erro(404, 'Acesso não encontrado');
@@ -79,6 +85,11 @@ Deno.serve(async (req) => {
     }
     await servico.from('usuarios_departamentos').delete().eq('usuario_id', id);
     if (perfil === 'gestor') await servico.from('usuarios_departamentos').insert(departamentos.map((d) => ({ usuario_id: id, departamento_id: d })));
+    await servico.from('usuarios_colaboradores').delete().eq('usuario_id', id);
+    if (perfil === 'gestor' && equipe.length) {
+      const { error: e3 } = await servico.from('usuarios_colaboradores').insert(equipe.map((x) => ({ usuario_id: id, colaborador_id: x })));
+      if (e3) return erro(400, 'Não foi possível salvar a equipe do gestor');
+    }
     return responder(200, { ok: true });
   }
   if (c.acao === 'link') {

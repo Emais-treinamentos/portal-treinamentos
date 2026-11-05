@@ -359,5 +359,35 @@ begin
   execute 'reset role';
   delete from departamentos where id = v_vazio;
 end $x$;
+-- Equipe do gestor: departamentos mais pessoas escolhidas uma a uma
+do $x$
+declare v_fora uuid; v_gestor uuid; v_outra uuid; v_dep uuid;
+begin
+  execute 'reset role';
+  select id into v_gestor from usuarios where email = 'gestor.teste@example.com';
+  select id into v_dep from departamentos where nome = 'CONTROLADORIA';
+  select id into v_fora from colaboradores where ativo and departamento_id <> v_dep order by nome limit 1;
+  select id into v_outra from colaboradores where ativo and departamento_id <> v_dep and id <> v_fora order by nome limit 1;
+  perform teste.como('gestor.teste@example.com');
+  perform teste.ok('gestor não vê pessoa de fora antes de escolher', not exists (select 1 from painel_colaboradores() p where p.id = v_fora));
+  execute 'reset role';
+  insert into usuarios_colaboradores values (v_gestor, v_fora);
+  perform teste.como('gestor.teste@example.com');
+  perform teste.ok('gestor vê a pessoa escolhida', exists (select 1 from painel_colaboradores() p where p.id = v_fora) and exists (select 1 from colaboradores where id = v_fora));
+  perform teste.ok('gestor segue vendo o departamento', exists (select 1 from colaboradores where departamento_id = v_dep));
+  perform teste.ok('gestor não vê quem não foi escolhido', not exists (select 1 from colaboradores where id = v_outra));
+  perform teste.ok('gestor lê a própria equipe', (select count(*) from usuarios_colaboradores) = 1);
+  begin insert into usuarios_colaboradores values (v_gestor, v_outra); perform teste.ok('gestor não aumenta a própria equipe', false);
+  exception when insufficient_privilege then perform teste.ok('gestor não aumenta a própria equipe', true); end;
+  perform teste.como('colaborador.teste@example.com');
+  perform teste.ok('colaborador não lê equipe de gestor', (select count(*) from usuarios_colaboradores) = 0);
+  execute 'reset role';
+  update usuarios set perfil = 'colaborador' where id = v_gestor;
+  perform teste.como('gestor.teste@example.com');
+  perform teste.ok('quem deixa de ser gestor não vê mais a pessoa', not exists (select 1 from colaboradores where id = v_fora));
+  execute 'reset role';
+  update usuarios set perfil = 'gestor' where id = v_gestor;
+  delete from usuarios_colaboradores where usuario_id = v_gestor;
+end $x$;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);
