@@ -7,7 +7,7 @@ import { SeloSituacao } from '../componentes/Pecas';
 import { cargaTexto, dataBR, rpc, textoErro, useDados, type SituacaoColaborador } from '../lib/api';
 import { baixarDocumentoAssinatura, gerarF109, gerarGrade, gerarTermoDispensa, nomesResultado, type DocumentoAssinatura, type Eficacia } from '../lib/documentos';
 
-type Linha = { id: string; nome: string; cargo: string | null; departamento: string | null; ativo: boolean; data_referencia: string | null; total: number; realizados: number; pendentes: number; motivo: string };
+type Linha = { id: string; nome: string; cargo: string | null; departamento: string | null; ativo: boolean; data_referencia: string | null; total: number; dispensados: number; realizados: number; pendentes: number; motivo: string };
 
 type Assinatura = { id: string; colaborador_id: string; tipo: DocumentoAssinatura['tipo']; status: string; solicitado_em: string; assinado_em: string | null; baixado_em: string | null };
 const useAssinaturas = () => useDados(() => rpc<Assinatura[]>('assinaturas_lista'));
@@ -78,7 +78,7 @@ export function ListaPresenca() {
                       <td className="celula-seta"><button type="button" className="botao-seta" aria-expanded={expandido} aria-label={`${expandido ? 'Fechar' : 'Ver'} treinamentos de ${c.nome}`} onClick={alternar}><span aria-hidden="true" className={expandido ? 'seta seta-aberta' : 'seta'} /></button></td>
                       <td><strong className="celula-nome">{c.nome}</strong></td>
                       <td>{c.cargo}</td>
-                      <td>{c.total}</td>
+                      <td>{Number(c.total) - Number(c.dispensados ?? 0)}</td>
                       <td>{c.realizados > 0 && <span className="qtd qtd-feito">{c.realizados}</span>}</td>
                       <td>{dispensado ? <span className="qtd qtd-neutra">Termo emitido</span> : c.pendentes > 0 && <button type="button" className="qtd qtd-pendente" aria-label={`${c.pendentes} pendente(s). Ver quais`} onClick={alternar}>{c.pendentes}</button>}</td>
                       <td>{situacaoAssinatura(c.id)}</td>

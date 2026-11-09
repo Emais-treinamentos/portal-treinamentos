@@ -9,7 +9,7 @@ import { gerarF109, gerarGrade, gerarTermoDispensa } from '../lib/documentos';
 import { supabase } from '../lib/supabase';
 import { useSessao } from '../lib/sessao';
 
-type Linha = { id: string; nome: string; cargo: string | null; departamento: string | null; ativo: boolean; data_referencia: string | null; total: number; realizados: number; agendados: number; pendentes: number; classificar: boolean; farol: string; motivo: string };
+type Linha = { id: string; nome: string; cargo: string | null; departamento: string | null; ativo: boolean; data_referencia: string | null; total: number; dispensados: number; realizados: number; agendados: number; pendentes: number; classificar: boolean; farol: string; motivo: string };
 
 const diasDesdeHoje = (d: string | null) => (d ? Math.floor((Date.now() - new Date(`${d.slice(0, 10)}T00:00:00`).getTime()) / 86400000) : null);
 
@@ -46,7 +46,7 @@ export function Colaboradores() {
           <button key={c.id} type="button" className="item-lista" onClick={() => setSel(c.id)}>
             <Farol cor={c.farol === 'inativo' ? 'cinza' : c.farol} rotulo={c.farol} />
             <span><strong>{c.nome}</strong><small>{c.cargo} · {c.departamento}</small><small>{c.motivo}</small></span>
-            <small>{c.realizados} de {c.total}</small>
+            <small>{c.realizados} de {Number(c.total) - Number(c.dispensados ?? 0)}</small>
           </button>
         ))}
       </div>
