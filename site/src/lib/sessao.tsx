@@ -10,6 +10,7 @@ export type Usuario = {
   email: string;
   perfil: Perfil;
   ativo: boolean;
+  tambem_instrutor: boolean;
 };
 
 // carregando: ainda lendo a sessão; fora: sem login; sem_cadastro: tem login mas não está em public.usuarios;
@@ -38,9 +39,9 @@ export const nomesPerfil: Record<Perfil, string> = {
   instrutor: 'Instrutor',
 };
 
-// Gestor e Gente e Gestão também podem ser instrutores: escolhem com qual perfil entrar.
-const opcoesDe = (p: Perfil | undefined): Perfil[] => {
-  if (p === 'admin') return ['admin', 'instrutor'];
+// Gestor é sempre também instrutor. Gente e Gestão só quando o acesso está marcado assim.
+const opcoesDe = (p: Perfil | undefined, instrutor = true): Perfil[] => {
+  if (p === 'admin') return instrutor ? ['admin', 'instrutor'] : ['admin'];
   if (p === 'gestor') return ['gestor', 'instrutor'];
   return p ? [p] : [];
 };
@@ -97,7 +98,7 @@ export function ProvedorSessao({ children }: { children: ReactNode }) {
     setSituacao('carregando');
     supabase
       .from('usuarios')
-      .select('id, nome, email, perfil, ativo')
+      .select('id, nome, email, perfil, ativo, tambem_instrutor')
       .eq('id', uid)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -116,7 +117,7 @@ export function ProvedorSessao({ children }: { children: ReactNode }) {
     };
   }, [sessaoLida, uid]);
 
-  const opcoesPerfil = opcoesDe(usuario?.perfil);
+  const opcoesPerfil = opcoesDe(usuario?.perfil, usuario?.tambem_instrutor ?? true);
   const perfilAtivo = opcoesPerfil.length === 1 ? opcoesPerfil[0] : escolhido && opcoesPerfil.includes(escolhido) ? escolhido : null;
 
   const valor: ValorSessao = {

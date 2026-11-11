@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     if (perfil === 'gestor' && !departamentos.length && !equipe.length) return erro(400, 'Escolha ao menos um departamento ou colaborador');
     const { data: criado, error } = await servico.auth.admin.createUser({ email, email_confirm: true });
     if (error || !criado.user) return erro(400, /already/i.test(error?.message ?? '') ? 'Este e-mail já tem acesso' : 'Não foi possível criar o acesso');
-    const { error: e2 } = await servico.from('usuarios').insert({ id: criado.user.id, nome, email, perfil, colaborador_id: c.colaborador_id || null });
+    const { error: e2 } = await servico.from('usuarios').insert({ id: criado.user.id, nome, email, perfil, tambem_instrutor: c.tambem_instrutor !== false, colaborador_id: c.colaborador_id || null });
     if (e2) { await servico.auth.admin.deleteUser(criado.user.id); return erro(400, 'Não foi possível criar o acesso'); }
     if (perfil === 'gestor') await servico.from('usuarios_departamentos').insert(departamentos.map((d) => ({ usuario_id: criado.user.id, departamento_id: d })));
     if (perfil === 'gestor' && equipe.length) {
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       const { error } = await servico.auth.admin.updateUserById(id, { email, email_confirm: true });
       if (error) return erro(400, /already/i.test(error.message) ? 'Este e-mail já tem acesso' : 'Não foi possível alterar o e-mail');
     }
-    const { error: e2 } = await servico.from('usuarios').update({ nome, email, perfil, colaborador_id: c.colaborador_id || null }).eq('id', id);
+    const { error: e2 } = await servico.from('usuarios').update({ nome, email, perfil, tambem_instrutor: c.tambem_instrutor !== false, colaborador_id: c.colaborador_id || null }).eq('id', id);
     if (e2) {
       if (trocouEmail) await servico.auth.admin.updateUserById(id, { email: emailAnterior, email_confirm: true });
       return erro(400, 'Não foi possível alterar o acesso');
