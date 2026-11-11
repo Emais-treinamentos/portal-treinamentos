@@ -5,6 +5,8 @@ import { Campo, FormDialogo } from '../componentes/Pecas';
 import { textoErro, useDados } from '../lib/api';
 import { enderecoDoSite, supabase } from '../lib/supabase';
 import { type Perfil } from '../lib/sessao';
+import { useSearchParams } from 'react-router-dom';
+import { FilaEnvios } from './Envios';
 
 async function chamar(corpo: Record<string, unknown>) {
   const { data, error } = await supabase.functions.invoke('gerenciar-acesso', { body: { ...corpo, destino: enderecoDoSite } });
@@ -16,16 +18,18 @@ async function chamar(corpo: Record<string, unknown>) {
   return data as { link?: string };
 }
 
-const abas = [['usuarios', 'Usuários'], ['regras', 'Regras'], ['emails', 'E-mails']] as const;
+const abas = [['usuarios', 'Usuários'], ['regras', 'Regras'], ['emails', 'E-mails'], ['envios', 'Envios']] as const;
 type Aba = (typeof abas)[number][0];
 const apoios: Record<Aba, string> = {
   usuarios: 'Quem entra no portal e com qual perfil. Ninguém se cadastra sozinho.',
   regras: 'Prazos e critérios do portal. A mudança vale daqui para frente e fica registrada no histórico.',
   emails: 'Os textos que o n8n envia. Os dados entram sozinhos nos campos entre chaves.',
+  envios: 'Fila de e-mails do portal. Enquanto o n8n não estiver ligado, tudo fica como pendente.',
 };
 
 export function Acessos() {
-  const [aba, setAba] = useState<Aba>('usuarios');
+  const [params] = useSearchParams();
+  const [aba, setAba] = useState<Aba>(() => (abas.some(([a]) => a === params.get('aba')) ? (params.get('aba') as Aba) : 'usuarios'));
   const [novo, setNovo] = useState(false);
   return (
     <Pagina titulo="Acessos" apoio={apoios[aba]} acoes={aba === 'usuarios' ? <button className="botao" type="button" onClick={() => setNovo(true)}>Novo acesso</button> : undefined}>
@@ -35,6 +39,7 @@ export function Acessos() {
       {aba === 'usuarios' && <Usuarios novo={novo} aoFecharNovo={() => setNovo(false)} />}
       {aba === 'regras' && <Regras />}
       {aba === 'emails' && <ModelosEmail />}
+      {aba === 'envios' && <FilaEnvios />}
     </Pagina>
   );
 }

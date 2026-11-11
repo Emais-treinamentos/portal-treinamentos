@@ -54,7 +54,7 @@ export function Topo() {
     ['/meu-calendario', 'Meu Calendário', 'turmas', p === 'gestor' || p === 'colaborador'],
     ['/meu-perfil', 'Meu Perfil', 'perfil', p === 'gestor' || p === 'colaborador'],
   ];
-  const apoio: [string, string, NomeIcone][] = [['/acessos', 'Acessos', 'acessos'], ['/envios', 'Envios', 'envios']];
+  const apoio: [string, string, NomeIcone][] = [['/acessos', 'Acessos', 'acessos']];
   return (
     <aside className="lateral">
       <div className="lateral-marca">

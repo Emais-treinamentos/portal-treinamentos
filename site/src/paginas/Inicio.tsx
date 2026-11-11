@@ -23,7 +23,7 @@ export function Inicio() {
 }
 
 function destino(i: ItemFila) {
-  if (i.grupo === 'envio') return '/envios';
+  if (i.grupo === 'envio') return '/acessos?aba=envios';
   if (i.grupo === 'eficacia') return `/eficacia?colaborador=${i.colaborador_id}`;
   if (i.grupo === 'assinatura') return `/lista-presenca?colaborador=${i.colaborador_id}`;
   if (i.turma_id) return `/turmas?turma=${i.turma_id}`;
