@@ -7,6 +7,7 @@ import { cargaTexto, dataBR, hora, horaFim, nomesEtapa, nomesStatus, nomesTipoSo
 import { gerarListaPresenca } from '../lib/documentos';
 import { supabase } from '../lib/supabase';
 import { Dialogo } from '../componentes/Dialogo';
+import { Calendario, type EventoCal } from '../componentes/Calendario';
 import { EscolherInstrutor, sugestoesDe, useInstrutores } from '../componentes/EscolherInstrutor';
 
 type TurmaLinha = { id: string; treinamento: string; etapa: Etapa; status: string; data: string | null; hora: string | null; sala: string | null; instrutor_email: string; participantes: number; solicitacao_aberta: boolean; conflito: boolean; motivo: string | null };
@@ -249,5 +250,40 @@ function DecidirSolicitacao({ s, aoFechar, aoSalvar }: { s: Solicitacao; aoFecha
       </div>
       <Campo rotulo="Resposta ao instrutor (opcional)"><textarea rows={2} value={resposta} onChange={(e) => setResposta(e.target.value)} /></Campo>
     </FormDialogo>
+  );
+}
+
+// Todas as turmas com data, para Gente e Gestão acompanhar mês a mês.
+const corEtapa: Partial<Record<Etapa, EventoCal['cor']>> = { a_planejar: 'aguardando', aguardando_instrutor: 'aguardando', formalizar: 'aguardando', agendadas: 'confirmado', presenca: 'presenca', realizadas: 'feito', canceladas: 'cancelado' };
+const filtrosCal = [['todos', 'Todos'], ['aguardando', 'Em formalização'], ['confirmado', 'Agendados'], ['presenca', 'Presença a registrar'], ['feito', 'Realizados']] as const;
+
+export function CalendarioGeral() {
+  const turmas = useTurmas();
+  const [sel, setSel] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<(typeof filtrosCal)[number][0]>('todos');
+  const [instrutor, setInstrutor] = useState('');
+  const [busca, setBusca] = useState('');
+  const [canceladas, setCanceladas] = useState(false);
+  const q = busca.trim().toLowerCase();
+  const base = (turmas.dados ?? []).filter((t) => t.data && corEtapa[t.etapa] && (canceladas || t.etapa !== 'canceladas'));
+  const instrutores = [...new Set(base.map((t) => t.instrutor_email).filter(Boolean))].sort();
+  const lista = base.filter((t) => (filtro === 'todos' || corEtapa[t.etapa] === filtro) && (!instrutor || t.instrutor_email === instrutor) && (!q || t.treinamento.toLowerCase().includes(q)));
+  const eventos: EventoCal[] = lista.map((t) => ({ id: t.id, titulo: t.treinamento, data: t.data!, hora: t.hora, cor: corEtapa[t.etapa]!, detalhe: [t.instrutor_email, t.sala, `${t.participantes} pessoa(s)`].filter(Boolean).join(' · ') }));
+  const conta = (f: string) => base.filter((t) => f === 'todos' || corEtapa[t.etapa] === f).length;
+  return (
+    <Pagina titulo="Calendário de Treinamentos" apoio="Todas as turmas com data, de todos os instrutores. Clique em um treinamento para ver os detalhes e acompanhar.">
+      {turmas.erro && <Mensagem tipo="erro">{turmas.erro}</Mensagem>}
+      <div className="chips chips-filtro" role="group" aria-label="Situação">
+        {filtrosCal.map(([f, nome]) => <button key={f} type="button" className="chip" aria-pressed={filtro === f} onClick={() => setFiltro(f)}>{nome}<small>{conta(f)}</small></button>)}
+      </div>
+      <div className="filtros-cal">
+        <Campo rotulo="Treinamento"><input type="search" placeholder="Buscar pelo nome" value={busca} onChange={(e) => setBusca(e.target.value)} /></Campo>
+        <Campo rotulo="Instrutor"><select value={instrutor} onChange={(e) => setInstrutor(e.target.value)}><option value="">Todos</option>{instrutores.map((i) => <option key={i}>{i}</option>)}</select></Campo>
+        <label className="opcao"><input type="checkbox" checked={canceladas} onChange={(e) => setCanceladas(e.target.checked)} />Mostrar canceladas</label>
+      </div>
+      {turmas.carregando && !turmas.dados && <Carregando />}
+      {turmas.dados && <Calendario eventos={eventos} aoAbrir={setSel} legenda={[['aguardando', 'Em formalização'], ['confirmado', 'Agendado'], ['presenca', 'Presença a registrar'], ['feito', 'Realizado'], ...(canceladas ? [['cancelado', 'Cancelado'] as [EventoCal['cor'], string]] : [])]} />}
+      {sel && <Dialogo aberto titulo="Treinamento" largura="larga" aoFechar={() => { setSel(null); void turmas.recarregar(); }}><PainelTurma id={sel} admin aoMudar={() => void turmas.recarregar()} /></Dialogo>}
+    </Pagina>
   );
 }

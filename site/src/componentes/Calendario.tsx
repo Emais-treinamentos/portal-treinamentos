@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { dataBR, hora } from '../lib/api';
 
-export type EventoCal = { id: string; titulo: string; data: string; hora?: string | null; cor: 'confirmado' | 'aguardando' | 'presenca' | 'feito' };
+export type EventoCal = { id: string; titulo: string; data: string; hora?: string | null; cor: 'confirmado' | 'aguardando' | 'presenca' | 'feito' | 'cancelado'; detalhe?: string };
 const semana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const iso = (a: number, m: number, d: number) => `${a}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -44,7 +44,7 @@ export function Calendario({ eventos: brutos, aoAbrir, legenda }: { eventos: Eve
           return (
             <div className={`cal-dia${iso(mes.a, mes.m, d) === hojeIso ? ' cal-hoje' : ''}`} key={d}>
               <span className="cal-numero">{d}</span>
-              {doDia(d).map((e) => <button key={e.id} type="button" className={`cal-evento cal-${e.cor}`} title={e.titulo} onClick={() => aoAbrir(e.id)}><b>{hora(e.hora)}</b> <span>{e.titulo}</span></button>)}
+              {doDia(d).map((e) => <button key={e.id} type="button" className={`cal-evento cal-${e.cor}`} title={e.detalhe ? `${e.titulo} · ${e.detalhe}` : e.titulo} onClick={() => aoAbrir(e.id)}><b>{hora(e.hora)}</b> <span>{e.titulo}</span></button>)}
             </div>
           );
         })}
@@ -52,7 +52,7 @@ export function Calendario({ eventos: brutos, aoAbrir, legenda }: { eventos: Eve
       <div className="cal-legenda">{legenda.map(([c, t]) => <span key={c}><i className={`cal-${c}`} aria-hidden="true" />{t}</span>)}</div>
       <div className="cal-lista">
         {!doMes.length && <p className="apoio">Nenhum treinamento neste mês.</p>}
-        {doMes.map((e) => <button key={e.id} type="button" className="item-lista" onClick={() => aoAbrir(e.id)}><i className={`cal-ponto cal-${e.cor}`} aria-hidden="true" /><span><strong>{e.titulo}</strong><small>{dataBR(e.data)} {hora(e.hora)}</small></span><small>Ver</small></button>)}
+        {doMes.map((e) => <button key={e.id} type="button" className="item-lista" onClick={() => aoAbrir(e.id)}><i className={`cal-ponto cal-${e.cor}`} aria-hidden="true" /><span><strong>{e.titulo}</strong><small>{dataBR(e.data)} {hora(e.hora)}{e.detalhe ? ` · ${e.detalhe}` : ''}</small></span><small>Ver</small></button>)}
       </div>
     </section>
   );

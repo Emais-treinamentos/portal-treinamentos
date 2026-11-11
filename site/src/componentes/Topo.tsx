@@ -39,6 +39,7 @@ export function Topo() {
     ['/', 'Dashboard', 'inicio', admin],
     ['/notificacoes', 'Notificações', 'sino', admin],
     ['/cadastros', 'Cadastros', 'cadastros', admin],
+    ['/calendario-geral', 'Calendário', 'turmas', admin],
     ['/planejar', 'Planejar Treinamentos', 'planejar', admin],
     ['/formalizar', 'Formalizar Convites', 'turmas', admin],
     ['/acompanhar', 'Acompanhar Treinamentos', 'minhas', admin],

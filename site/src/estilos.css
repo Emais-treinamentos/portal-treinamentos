@@ -2397,6 +2397,7 @@ h1, h2 { font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
 .cal-aguardando { background: #fdf1d8; color: #6b4a00; }
 .cal-presenca { background: #fbe3cf; color: #8a4208; }
 .cal-feito { background: #e6ebe9; color: #3b4f49; }
+.cal-cancelado { background: #f4e1e1; color: #8a2b2b; text-decoration: line-through; }
 .cal-legenda { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; font-size: 0.875rem; color: var(--suave); }
 .cal-legenda span { display: inline-flex; align-items: center; gap: 6px; }
 .cal-legenda i, .cal-ponto { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
@@ -2574,3 +2575,8 @@ select, input, textarea { max-width: 100%; }
 .cartao-lido { border-left-color: #c9d6d2; opacity: .8; }
 .chip-fixo { cursor: default; }
 .chips-filtro .chip .contador { margin-left: 6px; }
+
+/* Calendário geral de Gente e Gestão */
+.filtros-cal { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 12px; }
+.filtros-cal .campo { margin: 0; min-width: 200px; flex: 1 1 200px; }
+.filtros-cal .opcao { flex: 0 0 auto; padding-bottom: 8px; }

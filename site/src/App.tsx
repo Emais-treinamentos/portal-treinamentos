@@ -8,7 +8,7 @@ import { NovaSenha } from './paginas/NovaSenha';
 import { AcessoBloqueado } from './paginas/AcessoBloqueado';
 import { EscolherPerfil } from './paginas/EscolherPerfil';
 import { Inicio } from './paginas/Inicio';
-import { Acompanhar, Formalizar, IrParaTurma } from './paginas/Turmas';
+import { Acompanhar, Formalizar, IrParaTurma, CalendarioGeral } from './paginas/Turmas';
 import { Planejar } from './paginas/Planejar';
 import { ListaPresenca } from './paginas/ListaPresenca';
 import { CalendarioInstrutor, ConfirmarAgenda, MinhasTurmas, PresencaInstrutor } from './paginas/MinhasTurmas';
@@ -33,6 +33,7 @@ export function App() {
       <Route path="/esqueci-senha" element={<SoForaDoLogin><EsqueciSenha /></SoForaDoLogin>} />
       <Route path="/nova-senha" element={<NovaSenha />} />
       <Route path="/" element={<ComLogin><Inicio /></ComLogin>} />
+      <Route path="/calendario-geral" element={<SoPerfil perfil={['admin']}><CalendarioGeral /></SoPerfil>} />
       <Route path="/planejar" element={<SoPerfil perfil={['admin']}><Planejar /></SoPerfil>} />
       <Route path="/turmas" element={<SoPerfil perfil={gestao}><IrParaTurma /></SoPerfil>} />
       <Route path="/formalizar" element={<SoPerfil perfil={gestao}><Formalizar /></SoPerfil>} />
