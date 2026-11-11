@@ -24,22 +24,40 @@ export function ConfirmarAgenda() {
 
 export function PresencaInstrutor() {
   return <TurmasInstrutor titulo="Presença" apoio="Marque quem participou. Cada presente recebe um código único, que aparece na lista de presença do colaborador."
-    grupos={[['presenca', 'Registrar presença', ['presenca']], ['realizadas', 'Concluídos', ['realizadas']]]} vazio="Nenhum treinamento com presença a registrar." />;
+    grupos={[['presenca', 'Registrar presença', ['presenca']], ['realizadas', 'Concluídos nos últimos 30 dias', ['realizadas']]]} vazio="Nenhum treinamento com presença a registrar." comHistorico />;
 }
 
-function TurmasInstrutor({ titulo, apoio, grupos, vazio }: { titulo: string; apoio: string; grupos: [string, string, string[]][]; vazio: string }) {
+// Concluídos há mais de 30 dias vão para a aba Histórico.
+const limiteRecentes = () => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10); };
+
+function TurmasInstrutor({ titulo, apoio, grupos, vazio, comHistorico }: { titulo: string; apoio: string; grupos: [string, string, string[]][]; vazio: string; comHistorico?: boolean }) {
   const lista = useDados(() => rpc<Minha[]>('minhas_turmas'));
   const [sel, setSel] = useState<string | null>(null);
-  const visiveis = (lista.dados ?? []).filter((t) => grupos.some(([, , es]) => es.includes(t.etapa)));
+  const [aba, setAba] = useState<'ativos' | 'historico'>('ativos');
+  const [busca, setBusca] = useState('');
+  const limite = limiteRecentes();
+  const antiga = (t: Minha) => t.etapa === 'realizadas' && (t.data ?? '') < limite;
+  const todas = (lista.dados ?? []).filter((t) => grupos.some(([, , es]) => es.includes(t.etapa)));
+  const historico = comHistorico ? todas.filter(antiga).filter((t) => !busca.trim() || t.treinamento.toLowerCase().includes(busca.trim().toLowerCase())).sort((a, b) => (b.data ?? '').localeCompare(a.data ?? '')) : [];
+  const visiveis = comHistorico && aba === 'historico' ? historico : todas.filter((t) => !comHistorico || !antiga(t)).sort((a, b) => (a.etapa === 'realizadas' && b.etapa === 'realizadas' ? (b.data ?? '').localeCompare(a.data ?? '') : 0));
+  const gruposVisiveis: [string, string, string[]][] = comHistorico && aba === 'historico' ? [['realizadas', 'Concluídos há mais de 30 dias', ['realizadas']]] : grupos;
+  const qtdHistorico = comHistorico ? todas.filter(antiga).length : 0;
   return (
     <Pagina titulo={titulo} apoio={apoio}>
+      {comHistorico && (
+        <div className="chips chips-filtro" role="group" aria-label="Período">
+          <button type="button" className="chip" aria-pressed={aba === 'ativos'} onClick={() => { setAba('ativos'); setSel(null); }}>Últimos 30 dias<small>{todas.length - qtdHistorico}</small></button>
+          <button type="button" className="chip" aria-pressed={aba === 'historico'} onClick={() => { setAba('historico'); setSel(null); }}>Histórico<small>{qtdHistorico}</small></button>
+        </div>
+      )}
+      {comHistorico && aba === 'historico' && <label className="campo"><span className="sr">Buscar treinamento</span><input type="search" placeholder="Buscar treinamento no histórico" value={busca} onChange={(e) => setBusca(e.target.value)} /></label>}
       {lista.erro && <Mensagem tipo="erro">{lista.erro}</Mensagem>}
       {lista.carregando && !lista.dados && <Carregando />}
-      {lista.dados && !visiveis.length && <p className="vazio">{vazio}</p>}
+      {lista.dados && !visiveis.length && <p className="vazio">{comHistorico && aba === 'historico' ? 'Nenhum treinamento concluído há mais de 30 dias.' : vazio}</p>}
       {!!visiveis.length && (
         <div className={`mestre-detalhe ${sel ? 'com-selecao' : 'sem-selecao'}`}>
           <div>
-            {grupos.map(([g, nome, es]) => {
+            {gruposVisiveis.map(([g, nome, es]) => {
               const itens = visiveis.filter((t) => es.includes(t.etapa));
               if (!itens.length) return null;
               return (
