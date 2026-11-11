@@ -49,3 +49,19 @@ O arquivo extraído tem nomes e e-mails. Ele não entra no repositório.
 3. Incluir na ordem da tabela acima, sem gerar e-mail.
 4. Conferir as contagens contra este mapa.
 5. Limpar a fila de envios e só então ligar o n8n.
+
+## Sincronização de 11/11/2026
+
+Nova extração só de leitura do banco atual, comparada com a de 05/11. Cadastros, cargos, matriz, movimentações e reciclagens não mudaram. Entraram só os treinamentos de admissão de 2 colaboradores (Corretor de Incorporação e Assistente Jurídico).
+
+| Banco atual | Novos | Portal novo | Regra |
+| --- | --- | --- | --- |
+| planejamentos | 28 | turmas (25) | Mantém o id do planejamento. Quando o mesmo treinamento foi remarcado, vale o planejamento criado por último (3 versões anteriores ficam de fora) |
+| planejamento_cargos | 37 | turma_cargos (32) | Cargo ligado pelo nome |
+| presenca_colaborador | 23 | turma_participantes (20) | Colaborador ligado pelo nome. As 3 presenças das versões anteriores ficam de fora |
+| confirmacao_treinamento | 23 | Só conferência | |
+
+- Turma aguardando o instrutor usa a data sugerida.
+- Turmas abertas recebem os convocados pelo cálculo do portal.
+- As convocações geradas na inclusão foram canceladas, porque o banco atual já tinha enviado os convites.
+- A carga de 05/11 gerou ids novos para cargos e colaboradores. Por isso a ligação é feita pelo nome, com checagem de par único.
