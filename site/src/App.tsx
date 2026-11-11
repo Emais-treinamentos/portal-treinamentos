@@ -20,6 +20,7 @@ import { Movimentacoes } from './paginas/Movimentacoes';
 import { Cadastros } from './paginas/Cadastros';
 import { Acessos } from './paginas/Acessos';
 import { Envios } from './paginas/Envios';
+import { Notificacoes } from './paginas/Notificacoes';
 
 export function App() {
   const { recuperandoSenha } = useSessao();
@@ -50,6 +51,7 @@ export function App() {
       <Route path="/reciclagem" element={<SoPerfil perfil={['admin']}><Movimentacoes /></SoPerfil>} />
       <Route path="/cadastros" element={<SoPerfil perfil={['admin']}><Cadastros /></SoPerfil>} />
       <Route path="/acessos" element={<SoPerfil perfil={['admin']}><Acessos /></SoPerfil>} />
+      <Route path="/notificacoes" element={<SoPerfil perfil={['admin']}><Notificacoes /></SoPerfil>} />
       <Route path="/envios" element={<SoPerfil perfil={['admin']}><Envios /></SoPerfil>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

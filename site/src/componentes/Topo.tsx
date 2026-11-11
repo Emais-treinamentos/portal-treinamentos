@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useSessao, nomesPerfil } from '../lib/sessao';
 import { rpc, useDados } from '../lib/api';
@@ -12,6 +13,22 @@ function AvisoAvaliacoes() {
   return n ? <span className="contador" aria-label={`${n} pendência(s)`}>{n}</span> : null;
 }
 
+// Avisa o menu para recontar as notificações depois de uma decisão.
+export const avisarNotificacoes = () => window.dispatchEvent(new Event('notificacoes-mudaram'));
+
+function ContadorNotificacoes() {
+  const d = useDados(() => rpc<number>('contar_notificacoes'), []);
+  const { recarregar } = d;
+  useEffect(() => {
+    const f = () => void recarregar();
+    window.addEventListener('notificacoes-mudaram', f);
+    const t = window.setInterval(f, 120000);
+    return () => { window.removeEventListener('notificacoes-mudaram', f); window.clearInterval(t); };
+  }, [recarregar]);
+  const n = d.dados ?? 0;
+  return n ? <span className="contador" aria-label={`${n} notificação(ões)`}>{n}</span> : null;
+}
+
 export function Topo() {
   const { usuario, perfilAtivo, opcoesPerfil, escolherPerfil, sair } = useSessao();
   const navegar = useNavigate();
@@ -20,6 +37,7 @@ export function Topo() {
   const instrutor = p === 'instrutor';
   const itens: [string, string, NomeIcone, boolean][] = [
     ['/', 'Dashboard', 'inicio', admin],
+    ['/notificacoes', 'Notificações', 'sino', admin],
     ['/cadastros', 'Cadastros', 'cadastros', admin],
     ['/planejar', 'Planejar Treinamentos', 'planejar', admin],
     ['/formalizar', 'Formalizar Convites', 'turmas', admin],
@@ -44,7 +62,7 @@ export function Topo() {
       </div>
       <nav className="menu" aria-label="Seções do portal">
         {itens.filter((i) => i[3]).map(([para, rotulo, icone]) => (
-          <NavLink key={rotulo} to={para} end={para === '/'}><Icone nome={icone} />{rotulo}{para === '/meu-perfil' && <AvisoAvaliacoes />}</NavLink>
+          <NavLink key={rotulo} to={para} end={para === '/'}><Icone nome={icone} />{rotulo}{para === '/meu-perfil' && <AvisoAvaliacoes />}{para === '/notificacoes' && <ContadorNotificacoes />}</NavLink>
         ))}
         {admin && <hr className="menu-divisao" />}
         {admin && apoio.map(([para, rotulo, icone]) => <NavLink key={rotulo} to={para}><Icone nome={icone} />{rotulo}</NavLink>)}

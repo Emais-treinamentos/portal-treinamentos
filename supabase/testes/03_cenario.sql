@@ -488,5 +488,43 @@ begin
   update usuarios set ativo = true where id = v_adm;
   delete from instrutores_treinamento;
 end $x$;
+-- Notificações de Gente e Gestão
+do $x$
+declare v_t uuid; v_tr uuid; v_c1 uuid; v_c2 uuid; v_cg uuid; v_s uuid; v_p jsonb; v_inst text := 'instrutor.notif@example.com'; v_av uuid; v_av2 uuid;
+begin
+  execute 'reset role';
+  select id into v_tr from treinamentos where ativo order by nome limit 1;
+  select id, cargo_id into v_c1, v_cg from colaboradores where ativo order by nome limit 1;
+  select id into v_c2 from colaboradores where ativo and id <> v_c1 order by nome limit 1;
+  insert into turmas (treinamento_id, status, data, hora_inicio, instrutor_email, presenca_concluida_em) values (v_tr, 'realizada', app.hoje() - 3, '10:00', (select email from usuarios where email = 'gestor.teste@example.com'), now() - interval '2 days') returning id into v_t;
+  insert into turma_participantes (turma_id, colaborador_id, cargo_na_data_id, situacao, origem) values (v_t, v_c1, v_cg, 'presente', 'manual'), (v_t, v_c2, v_cg, 'ausente', 'manual');
+  insert into avaliacao_respostas (turma_id, nota, pontualidade, conteudo, instrutor, tempo, local_material, melhorias, comentario) values (v_t, 3, 'horario', 'sim', 'sim', 'parte', 'sim', '{Mais tempo}', 'Faltou exemplo') returning id into v_av;
+  insert into avaliacao_respostas (turma_id, nota, pontualidade, conteudo, instrutor, tempo, local_material) values (v_t, 5, 'horario', 'sim', 'sim', 'sim', 'sim') returning id into v_av2;
+  perform teste.como('gestor.teste@example.com');
+  v_s := solicitar_alteracao(v_t, 'correcao_presenca', 'Esqueci de marcar o segundo');
+  perform teste.como('gestao.teste@example.com');
+  v_p := painel_notificacoes(60);
+  perform teste.ok('pedido aberto aparece mesmo com turma realizada', exists (select 1 from jsonb_array_elements(v_p->'pedidos') x where (x->>'id')::uuid = v_s));
+  perform teste.ok('pedido de correção traz a presença', (select jsonb_array_length(x->'participantes') from jsonb_array_elements(v_p->'pedidos') x where (x->>'id')::uuid = v_s) = 2);
+  perform teste.ok('só avaliação com comentário aparece', (select count(*) from jsonb_array_elements(v_p->'comentarios') x where (x->>'id')::uuid in (v_av, v_av2)) = 1);
+  perform teste.ok('contador soma pedido e comentário', contar_notificacoes() >= 2);
+  perform marcar_lido(array['avaliacao:' || v_av]);
+  perform teste.ok('comentário lido sai do contador', not exists (select 1 from jsonb_array_elements(painel_notificacoes(60)->'comentarios') x where (x->>'id')::uuid = v_av and not (x->>'lido')::boolean));
+  begin perform decidir_correcao_presenca(v_s, true, null, '[]'); perform teste.ok('correção sem mudança é recusada', false);
+  exception when raise_exception then perform teste.ok('correção sem mudança é recusada', true); end;
+  perform decidir_correcao_presenca(v_s, true, 'Ajustado', jsonb_build_array(jsonb_build_object('colaborador_id', v_c2, 'situacao', 'presente')));
+  perform teste.ok('correção aplicada', (select situacao from turma_participantes where turma_id = v_t and colaborador_id = v_c2) = 'presente');
+  perform teste.ok('pedido fecha como aprovado', (select status from turma_solicitacoes where id = v_s) = 'aprovada');
+  execute 'reset role';
+  perform teste.ok('quem virou presente recebe avaliação', exists (select 1 from avaliacao_pendentes where turma_id = v_t and colaborador_id = v_c2));
+  perform teste.como('gestao.teste@example.com');
+  perform teste.ok('decisão vai para o histórico', exists (select 1 from jsonb_array_elements(painel_notificacoes(60)->'historico') x where (x->>'id')::uuid = v_s));
+  perform teste.como('gestor.teste@example.com');
+  begin perform painel_notificacoes(60); perform teste.ok('só Gente e Gestão vê notificações', false);
+  exception when others then perform teste.ok('só Gente e Gestão vê notificações', true); end;
+  perform teste.ok('contador zerado fora de Gente e Gestão', contar_notificacoes() = 0);
+  execute 'reset role';
+  delete from turmas where id = v_t; delete from avisos_lidos;
+end $x$;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);

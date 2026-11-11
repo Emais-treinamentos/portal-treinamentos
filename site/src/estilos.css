@@ -2562,3 +2562,15 @@ select, input, textarea { max-width: 100%; }
 .treino-substituto { flex: 1 1 200px; margin: 0; display: flex; align-items: center; gap: 8px; }
 .treino-substituto span { font-size: .85rem; white-space: nowrap; }
 .treino-substituto select { flex: 1; min-width: 0; }
+
+/* Notificações de Gente e Gestão */
+.lista-avisos { display: flex; flex-direction: column; gap: 12px; }
+.cartao-aviso { background: #fff; border: 1px solid #dfe8e5; border-left: 4px solid #006666; border-radius: 10px; padding: 14px 16px; }
+.cartao-aviso p { margin: 4px 0; }
+.cartao-aviso header { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.cartao-aviso header small { color: #5b6b66; }
+.cartao-aviso-titulo { font-weight: 600; }
+.cartao-aviso-citacao { border-left: 3px solid #8ED973; padding-left: 10px; font-style: italic; }
+.cartao-lido { border-left-color: #c9d6d2; opacity: .8; }
+.chip-fixo { cursor: default; }
+.chips-filtro .chip .contador { margin-left: 6px; }

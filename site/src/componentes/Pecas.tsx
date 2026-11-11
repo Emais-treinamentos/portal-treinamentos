@@ -49,6 +49,7 @@ export function Campo({ rotulo, children }: { rotulo: string; children: ReactNod
 }
 
 const icones = {
+  sino: 'M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4',
   inicio: 'M3 11l9-8 9 8v10h-6v-6H9v6H3z',
   planejar: 'M9 3h6v4H9zM9 5H5v16h14V5h-4M8 12h8M8 16h5',
   lista: 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2',
