@@ -83,7 +83,7 @@ export const nomesAcao: Record<string, string> = { total: 'Total', parcial: 'Par
 export type Pessoa = { colaborador_id: string; nome: string; cargo: string | null; situacao: string; codigo?: string | null; origem: string };
 export type Solicitacao = { id: string; tipo: string; motivo: string; proposta: { data?: string; hora?: string; sala?: string; instrutor_email?: string }; status: string; resposta: string | null; solicitado_em: string };
 export type TurmaDetalhe = {
-  id: string; treinamento: string; carga_minutos: number; etapa: Etapa; status: string; tipo: string; data: string | null; hora_opcao_1: string | null; hora_opcao_2: string | null; hora_inicio: string | null;
+  id: string; treinamento_id: string; treinamento: string; carga_minutos: number; etapa: Etapa; status: string; tipo: string; data: string | null; hora_opcao_1: string | null; hora_opcao_2: string | null; hora_inicio: string | null;
   sala: string | null; instrutor_email: string; motivo_replanejamento: string | null; inicio: string | null; fim: string | null; sou_instrutor: boolean; instrutor_tem_acesso: boolean; presenca_concluida_em: string | null;
   cargos: { cargo_id: string; nome: string; incluir: boolean; elegiveis: number }[];
   participantes: Pessoa[]; solicitacoes: Solicitacao[]; conflitos: { tipo: string; turma_id: string; treinamento: string }[];

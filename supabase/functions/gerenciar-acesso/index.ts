@@ -11,6 +11,9 @@ const PERFIS = ['admin', 'gestor', 'colaborador', 'instrutor'];
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const responder = (status: number, corpo: unknown) => new Response(JSON.stringify(corpo), { status, headers: { ...cabecalhos, 'Content-Type': 'application/json' } });
 const erro = (status: number, mensagem: string) => responder(status, { erro: mensagem });
+// Treinamentos que a pessoa aplica, com o substituto de cada um.
+const lerTreinamentos = (v: unknown) => (Array.isArray(v) ? v : []).map((x) => ({ treinamento_id: String(x?.treinamento_id ?? ''), substituto_id: x?.substituto_id ? String(x.substituto_id) : null })).filter((x) => x.treinamento_id);
+const aplica = (perfil: string, instrutor: boolean) => perfil === 'instrutor' || perfil === 'gestor' || (perfil === 'admin' && instrutor);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cabecalhos });
@@ -47,6 +50,11 @@ Deno.serve(async (req) => {
     if (perfil === 'gestor' && equipe.length) {
       const { error: e3 } = await servico.from('usuarios_colaboradores').insert(equipe.map((x) => ({ usuario_id: criado.user.id, colaborador_id: x })));
       if (e3) { await servico.auth.admin.deleteUser(criado.user.id); return erro(400, 'Não foi possível salvar a equipe do gestor'); }
+    }
+    const treinos = lerTreinamentos(c.treinamentos);
+    if (aplica(perfil, c.tambem_instrutor !== false) && treinos.length) {
+      const { error: e4 } = await servico.from('instrutores_treinamento').insert(treinos.map((x) => ({ usuario_id: criado.user.id, ...x })));
+      if (e4) { await servico.auth.admin.deleteUser(criado.user.id); return erro(400, e4.message.includes('substituto') ? e4.message : 'Não foi possível salvar os treinamentos que a pessoa aplica'); }
     }
     const { data: link } = await servico.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo } });
     return responder(200, { link: link?.properties?.action_link ?? null });
@@ -89,6 +97,19 @@ Deno.serve(async (req) => {
     if (perfil === 'gestor' && equipe.length) {
       const { error: e3 } = await servico.from('usuarios_colaboradores').insert(equipe.map((x) => ({ usuario_id: id, colaborador_id: x })));
       if (e3) return erro(400, 'Não foi possível salvar a equipe do gestor');
+    }
+    if (Array.isArray(c.treinamentos)) {
+      await servico.from('instrutores_treinamento').delete().eq('usuario_id', id);
+      const treinos = lerTreinamentos(c.treinamentos);
+      if (aplica(perfil, c.tambem_instrutor !== false) && treinos.length) {
+        const { error: e4 } = await servico.from('instrutores_treinamento').insert(treinos.map((x) => ({ usuario_id: id, ...x })));
+        if (e4) return erro(400, e4.message.includes('substituto') ? e4.message : 'Não foi possível salvar os treinamentos que a pessoa aplica');
+      }
+    }
+    // Quem deixa de aplicar treinamentos deixa também de ser substituto.
+    if (!aplica(perfil, c.tambem_instrutor !== false)) {
+      await servico.from('instrutores_treinamento').delete().eq('usuario_id', id);
+      await servico.from('instrutores_treinamento').update({ substituto_id: null }).eq('substituto_id', id);
     }
     return responder(200, { ok: true });
   }

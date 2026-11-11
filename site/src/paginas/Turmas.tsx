@@ -7,6 +7,7 @@ import { cargaTexto, dataBR, hora, horaFim, nomesEtapa, nomesStatus, nomesTipoSo
 import { gerarListaPresenca } from '../lib/documentos';
 import { supabase } from '../lib/supabase';
 import { Dialogo } from '../componentes/Dialogo';
+import { EscolherInstrutor, sugestoesDe, useInstrutores } from '../componentes/EscolherInstrutor';
 
 type TurmaLinha = { id: string; treinamento: string; etapa: Etapa; status: string; data: string | null; hora: string | null; sala: string | null; instrutor_email: string; participantes: number; solicitacao_aberta: boolean; conflito: boolean; motivo: string | null };
 const etapasFormalizar: Etapa[] = ['a_planejar', 'aguardando_instrutor', 'formalizar'];
@@ -198,6 +199,7 @@ function AlterarTurma({ t, salas, aoFechar, aoSalvar }: { t: TurmaDetalhe; salas
   const [h, setH] = useState(hora(t.hora_inicio ?? t.hora_opcao_1));
   const [sala, setSala] = useState(t.sala ?? '');
   const [email, setEmail] = useState(t.instrutor_email);
+  const instrutores = useInstrutores();
   const [motivo, setMotivo] = useState('');
   return (
     <FormDialogo titulo="Alterar turma" rotulo="Salvar alteração" aoFechar={aoFechar}
@@ -207,7 +209,7 @@ function AlterarTurma({ t, salas, aoFechar, aoSalvar }: { t: TurmaDetalhe; salas
         <Campo rotulo="Data"><input type="date" value={data} onChange={(e) => setData(e.target.value)} /></Campo>
         <Campo rotulo="Horário"><input type="time" value={h} onChange={(e) => setH(e.target.value)} /></Campo>
         <Campo rotulo="Sala"><select value={sala} onChange={(e) => setSala(e.target.value)}><option value="">Não definida</option>{salas.map((s) => <option key={s}>{s}</option>)}</select></Campo>
-        <Campo rotulo="E-mail do instrutor"><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Campo>
+        {instrutores.dados ? <EscolherInstrutor sugestoes={sugestoesDe(instrutores.dados, t.treinamento_id)} valor={email} aoMudar={setEmail} /> : <Campo rotulo="Instrutor"><input disabled value={email} /></Campo>}
       </div>
       <Campo rotulo="Motivo"><textarea required rows={2} value={motivo} onChange={(e) => setMotivo(e.target.value)} /></Campo>
     </FormDialogo>

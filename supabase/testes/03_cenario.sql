@@ -452,5 +452,41 @@ begin
   delete from notificacoes where tipo like '%_colaborador';
   update colaboradores set email = 'restaurado@example.com' where id = v_sem;
 end $x$;
+-- Instrutores por treinamento
+do $x$
+declare v_tr uuid; v_tr2 uuid; v_ges uuid; v_adm uuid; v_col uuid; n int;
+begin
+  execute 'reset role';
+  select id into v_tr from treinamentos where ativo order by nome limit 1;
+  select id into v_tr2 from treinamentos where ativo and id <> v_tr order by nome limit 1;
+  select id into v_ges from usuarios where email = 'gestor.teste@example.com';
+  select id into v_adm from usuarios where email = 'gestao.teste@example.com';
+  select id into v_col from usuarios where email = 'colaborador.teste@example.com';
+  insert into instrutores_treinamento values (v_ges, v_tr, v_adm), (v_adm, v_tr2, null);
+  begin insert into instrutores_treinamento values (v_col, v_tr, null); perform teste.ok('colaborador não aplica treinamento', false);
+  exception when raise_exception then perform teste.ok('colaborador não aplica treinamento', true); end;
+  begin insert into instrutores_treinamento values (v_adm, v_tr, v_col); perform teste.ok('substituto precisa ser instrutor', false);
+  exception when raise_exception then perform teste.ok('substituto precisa ser instrutor', true); end;
+  begin insert into instrutores_treinamento values (v_adm, v_tr, v_adm); perform teste.ok('não substitui a si mesmo', false);
+  exception when check_violation then perform teste.ok('não substitui a si mesmo', true); end;
+  perform teste.como('gestao.teste@example.com');
+  perform teste.ok('sugestão traz titular e depois substituto', (select array_agg(papel || ':' || email) from instrutores_dos_treinamentos() where treinamento_id = v_tr) = array['titular:gestor.teste@example.com', 'substituto:gestao.teste@example.com']);
+  perform teste.ok('substituto que já é titular não repete', (select count(*) from instrutores_dos_treinamentos() where treinamento_id = v_tr2) = 1);
+  perform teste.como('gestor.teste@example.com');
+  begin perform instrutores_dos_treinamentos(); perform teste.ok('só Gente e Gestão consulta as sugestões', false);
+  exception when others then perform teste.ok('só Gente e Gestão consulta as sugestões', true); end;
+  perform teste.ok('instrutor vê os próprios vínculos', (select count(*) from instrutores_treinamento) = 1);
+  begin insert into instrutores_treinamento values (v_ges, v_tr2, null); perform teste.ok('instrutor não grava vínculo', false);
+  exception when insufficient_privilege then perform teste.ok('instrutor não grava vínculo', true); end;
+  perform teste.como('colaborador.teste@example.com');
+  perform teste.ok('colaborador não lê vínculos', (select count(*) from instrutores_treinamento) = 0);
+  execute 'reset role';
+  update usuarios set ativo = false where id = v_adm;
+  perform teste.como('gestao.teste@example.com');
+  execute 'reset role';
+  perform teste.ok('substituto inativo aparece marcado', exists (select 1 from instrutores_treinamento i join usuarios u on u.id = i.substituto_id where i.treinamento_id = v_tr and not u.ativo));
+  update usuarios set ativo = true where id = v_adm;
+  delete from instrutores_treinamento;
+end $x$;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);

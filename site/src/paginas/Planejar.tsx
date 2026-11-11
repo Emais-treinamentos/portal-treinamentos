@@ -5,6 +5,7 @@ import { Carregando } from '../componentes/Carregando';
 import { Campo, FormDialogo } from '../componentes/Pecas';
 import { rpc, useDados } from '../lib/api';
 import { supabase } from '../lib/supabase';
+import { EscolherInstrutor, sugestaoPadrao, sugestoesDe, useInstrutores, type SugestaoInstrutor } from '../componentes/EscolherInstrutor';
 
 type Item = { chave: string; treinamento_id: string; treinamento: string; tipo: string; individual: boolean; cargos: { cargo_id: string; nome: string }[]; pessoas: { colaborador_id: string; nome: string; motivo: string }[] };
 type Agenda = { data: string; hora_1: string; hora_2: string; email: string };
@@ -23,6 +24,7 @@ export function Planejar() {
   const [aceite, setAceite] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const plano = useDados(() => rpc<Item[]>('planejar_treinamentos', { p_cargos: selCargos }), [selCargos.join(',')]);
+  const instrutores = useInstrutores();
 
   // Quem chega com cargos já escolhidos vê os departamentos deles marcados.
   const preparado = useRef(false);
@@ -55,7 +57,7 @@ export function Planejar() {
   function validar() {
     const falta: string[] = [];
     escolhidos.forEach((i) => {
-      const a = agendas[i.chave] ?? vazio;
+      const a = agendaDe(i);
       const f = [!a.data && 'data', !a.hora_1 && !a.hora_2 && 'horário', !a.email.trim() && 'e-mail do instrutor'].filter(Boolean);
       if (f.length) falta.push(`${i.treinamento}: falta ${f.join(', ')}`);
     });
@@ -65,16 +67,18 @@ export function Planejar() {
 
   async function enviar() {
     const r = await rpc<{ criadas: number; consolidadas: number }>('enviar_planejamento', {
-      p_itens: escolhidos.map((i) => ({ treinamento_id: i.treinamento_id, tipo: i.tipo, cargos: i.cargos.map((c) => c.cargo_id), ...(agendas[i.chave] ?? vazio) })),
+      p_itens: escolhidos.map((i) => ({ treinamento_id: i.treinamento_id, tipo: i.tipo, cargos: i.cargos.map((c) => c.cargo_id), ...agendaDe(i) })),
     });
     const partes = [r.criadas && `${r.criadas} turma(s) criada(s), com aviso na fila de envio`, r.consolidadas && `${r.consolidadas} consolidada(s) em turma já aberta`].filter(Boolean);
     setMsg(`${partes.join('. ')}.`);
     setSelCargos([]); setSelDepts([]); setAgendas({}); setMarcas({}); setErros([]);
   }
 
-  const cartao = (i: Item) => <CartaoPlano key={i.chave} i={i} marcado={marcado(i)} agenda={agendas[i.chave] ?? vazio}
-    aoMarcar={(v) => setMarcas({ ...marcas, [i.chave]: v })}
-    aoMudar={(a) => setAgendas({ ...agendas, [i.chave]: a })} />;
+  // Agenda nova já vem com o instrutor cadastrado para o treinamento.
+  const agendaDe = (i: Item) => agendas[i.chave] ?? { ...vazio, email: sugestaoPadrao(sugestoesDe(instrutores.dados, i.treinamento_id)) };
+  const cartao = (i: Item) => <CartaoPlano key={i.chave} i={i} marcado={marcado(i)} agenda={agendaDe(i)} sugestoes={sugestoesDe(instrutores.dados, i.treinamento_id)}
+    aoMarcar={(v) => setMarcas((m) => ({ ...m, [i.chave]: v }))}
+    aoMudar={(a) => setAgendas((x) => ({ ...x, [i.chave]: a }))} />;
 
   return (
     <Pagina titulo="Planejar Treinamentos" apoio="Selecione departamentos e cargos para consolidar os treinamentos e enviar as sugestões de agenda.">
@@ -149,7 +153,7 @@ export function Planejar() {
   );
 }
 
-function CartaoPlano({ i, marcado, agenda, aoMarcar, aoMudar }: { i: Item; marcado: boolean; agenda: Agenda; aoMarcar: (v: boolean) => void; aoMudar: (a: Agenda) => void }) {
+function CartaoPlano({ i, marcado, agenda, sugestoes, aoMarcar, aoMudar }: { i: Item; marcado: boolean; agenda: Agenda; sugestoes: SugestaoInstrutor[]; aoMarcar: (v: boolean) => void; aoMudar: (a: Agenda) => void }) {
   const nomes = i.pessoas.map((p) => p.nome).join(', ');
   return (
     <div className="plano-cartao">
@@ -164,7 +168,7 @@ function CartaoPlano({ i, marcado, agenda, aoMarcar, aoMudar }: { i: Item; marca
           <Campo rotulo="Data sugerida"><input type="date" value={agenda.data} onChange={(e) => aoMudar({ ...agenda, data: e.target.value })} /></Campo>
           <Campo rotulo="Horário opção 1"><input type="time" value={agenda.hora_1} onChange={(e) => aoMudar({ ...agenda, hora_1: e.target.value })} /></Campo>
           <Campo rotulo="Horário opção 2"><input type="time" value={agenda.hora_2} onChange={(e) => aoMudar({ ...agenda, hora_2: e.target.value })} /></Campo>
-          <Campo rotulo="E-mail do instrutor"><input type="email" value={agenda.email} onChange={(e) => aoMudar({ ...agenda, email: e.target.value })} /></Campo>
+          <EscolherInstrutor sugestoes={sugestoes} valor={agenda.email} aoMudar={(email) => aoMudar({ ...agenda, email })} />
         </div>
       )}
     </div>

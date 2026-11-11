@@ -2553,3 +2553,12 @@ select, input, textarea { max-width: 100%; }
 /* Listas de marcar longas, dentro dos formulários de acesso */
 .lista-marcar { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; padding: 8px; border: 1px solid #a9bab5; border-radius: 6px; margin-top: 6px; }
 .campo-grupo .apoio { margin: 0 0 6px; }
+
+/* Treinamentos que o instrutor aplica, com o substituto ao lado */
+.lista-treinos { max-height: 320px; gap: 4px; }
+.treino-vinculo { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 4px 0; border-bottom: 1px solid #e3ebe8; }
+.treino-vinculo:last-child { border-bottom: 0; }
+.treino-vinculo .opcao { flex: 1 1 220px; }
+.treino-substituto { flex: 1 1 200px; margin: 0; display: flex; align-items: center; gap: 8px; }
+.treino-substituto span { font-size: .85rem; white-space: nowrap; }
+.treino-substituto select { flex: 1; min-width: 0; }
