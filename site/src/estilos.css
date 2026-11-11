@@ -2580,3 +2580,10 @@ select, input, textarea { max-width: 100%; }
 .filtros-cal { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 12px; }
 .filtros-cal .campo { margin: 0; min-width: 200px; flex: 1 1 200px; }
 .filtros-cal .opcao { flex: 0 0 auto; padding-bottom: 8px; }
+
+/* Menu lateral: marca e usuário fixos, só a lista de seções rola */
+@media (min-width: 861px) {
+  .lateral { overflow: hidden; }
+  .lateral .menu { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -6px; padding: 0 6px; scrollbar-width: thin; }
+  .lateral-usuario { flex: none; background: var(--superficie); }
+}
