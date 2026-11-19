@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase, mensagemDeErro, enderecoDoSite } from '../lib/supabase';
+import { supabase, mensagemDeErro } from '../lib/supabase';
 import { useSessao } from '../lib/sessao';
 import { Moldura } from '../componentes/Moldura';
 
@@ -18,16 +18,17 @@ export function EsqueciSenha() {
   async function pedirCodigo(e?: FormEvent) {
     e?.preventDefault();
     setErro(null); setAviso(null); setEnviando(true);
-    const { error } = await supabase.auth.signInWithOtp({ email: emailLimpo, options: { shouldCreateUser: false, emailRedirectTo: `${enderecoDoSite}nova-senha` } });
+    // O código é gerado no Supabase e enviado pelo n8n. E-mail sem acesso recebe a mesma resposta.
+    const { error } = await supabase.functions.invoke('enviar-codigo', { body: { email: emailLimpo } });
     setEnviando(false);
-    // E-mail sem acesso recebe a mesma resposta, para não revelar quem está cadastrado.
-    if (error && /rate limit|too many|seconds/i.test(error.message)) { setErro('Muitos pedidos seguidos. Aguarde um minuto e peça o código de novo.'); return; }
-    // O servidor de e-mail às vezes demora a responder, mas o e-mail costuma sair mesmo assim.
-    const demorou = !!error && ((error as { status?: number }).status === 504 || /504|timeout|deadline/i.test(error.message));
-    if (error && !demorou && !/signups not allowed|not found|otp/i.test(error.message)) { setErro(mensagemDeErro(error)); return; }
-    if (demorou) { setEtapa('codigo'); setAviso('O envio demorou mais que o normal. Confira o e-mail em alguns minutos antes de pedir outro código.'); return; }
+    if (error) {
+      const r = (error as { context?: Response }).context;
+      const j = r ? await r.json().catch(() => null) : null;
+      setErro(j?.erro ?? 'Não foi possível enviar o código agora. Tente de novo em instantes.');
+      return;
+    }
     setEtapa('codigo');
-    if (e === undefined) setAviso('Enviamos um novo código.');
+    if (e === undefined) setAviso('Enviamos um novo código. Use o mais recente.');
   }
 
   async function confirmar(e: FormEvent) {
@@ -58,7 +59,7 @@ export function EsqueciSenha() {
       ) : (
         <form className="formulario" onSubmit={confirmar} noValidate>
           <h1>Digite o código</h1>
-          <p className="apoio">Se <strong>{emailLimpo}</strong> tiver acesso ao portal, chega em instantes um e-mail com o código. Se o e-mail trouxer um link em vez do código, basta abrir o link neste aparelho. Se não aparecer, olhe a caixa de spam.</p>
+          <p className="apoio">Se <strong>{emailLimpo}</strong> tiver acesso ao portal, chega em instantes um e-mail com o código. Se não aparecer, olhe a caixa de spam.</p>
           <label className="campo">
             <span>Código</span>
             <input className="campo-codigo" inputMode="numeric" autoComplete="one-time-code" maxLength={10} required value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))} />
