@@ -2592,3 +2592,6 @@ select, input, textarea { max-width: 100%; }
 .campo-codigo { font-size: 1.4rem; letter-spacing: .35em; text-align: center; font-variant-numeric: tabular-nums; }
 .botao-link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
 .botao-link:disabled { opacity: .6; cursor: default; }
+
+/* Envio do e-mail de acesso em lote */
+.acoes-lote { align-items: center; margin-bottom: 12px; flex-wrap: wrap; }

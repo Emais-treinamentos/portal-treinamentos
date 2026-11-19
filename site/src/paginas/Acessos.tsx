@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pagina, Mensagem, VoltarLista } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Campo, FormDialogo } from '../componentes/Pecas';
-import { textoErro, useDados } from '../lib/api';
+import { rpc, textoErro, useDados } from '../lib/api';
 import { enderecoDoSite, supabase } from '../lib/supabase';
 import { type Perfil } from '../lib/sessao';
 import { useSearchParams } from 'react-router-dom';
@@ -44,28 +44,52 @@ export function Acessos() {
   );
 }
 
+type EnvioAcesso = { email: string; situacao: string; quando: string };
+const textoEnvio = (e?: EnvioAcesso) => !e ? 'Nunca enviado' : e.situacao === 'enviada' ? `Enviado em ${new Date(e.quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : e.situacao === 'pendente' ? 'Na fila do n8n' : e.situacao === 'erro' ? 'Erro no envio, tenta de novo' : 'Não enviado';
+
 function Usuarios({ novo, aoFecharNovo }: { novo: boolean; aoFecharNovo: () => void }) {
   const l = useDados(async () => (await supabase.from('usuarios').select('id, nome, email, perfil, ativo, colaborador_id, tambem_instrutor').order('nome')).data ?? []);
   const cols = useDados(async () => (await supabase.from('colaboradores').select('id, nome, email, ativo').order('nome')).data ?? []);
+  const envios = useDados(() => rpc<EnvioAcesso[]>('emails_acesso_enviados'), []);
   const [editar, setEditar] = useState<Acesso | null>(null);
-  const [link, setLink] = useState<string | null>(null);
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [msg, setMsg] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const ativos = (l.dados ?? []).filter((u) => u.ativo);
+  const envioDe = (email: string) => envios.dados?.find((e) => e.email === email.toLowerCase());
+  async function enviar(ids: string[]) {
+    setErro(null); setMsg(null); setEnviando(true);
+    try {
+      const n = await rpc<number>('enviar_email_acesso', { p_usuarios: ids });
+      setMsg(n ? `${n} e-mail(s) de acesso na fila. O n8n envia até 20 por rodada, a cada 10 minutos.` : 'Nenhum e-mail novo: quem foi escolhido já tem um e-mail de acesso aguardando envio.');
+      setMarcados([]); void envios.recarregar();
+    } catch (e) { setErro(textoErro(e)); } finally { setEnviando(false); }
+  }
+  const todos = ativos.length > 0 && ativos.every((u) => marcados.includes(u.id));
   return (
     <>
       {erro && <Mensagem tipo="erro" aoFechar={() => setErro(null)}>{erro}</Mensagem>}
-      {link && <div className="aviso aviso-ok aviso-faixa"><span>Envie este link à pessoa para definir a senha: <input readOnly value={link} onFocus={(e) => e.target.select()} style={{ width: '100%' }} /></span><button className="botao botao-discreto" type="button" onClick={() => setLink(null)}>Fechar</button></div>}
+      {msg && <Mensagem tipo="ok" aoFechar={() => setMsg(null)}>{msg}</Mensagem>}
+      <div className="linha-acoes acoes-lote">
+        <button className="botao botao-pequeno" type="button" disabled={!marcados.length || enviando} onClick={() => void enviar(marcados)}>{enviando ? 'Enviando' : `Enviar e-mail de acesso${marcados.length ? ` (${marcados.length})` : ''}`}</button>
+        <span className="apoio">Marque as pessoas na lista. O e-mail explica o perfil e como criar a senha no primeiro acesso.</span>
+      </div>
       {l.carregando && !l.dados && <Carregando />}
-      <div className="tabela-rolagem"><table className="tabela"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Colaborador</th><th>Situação</th><th /></tr></thead>
+      <div className="tabela-rolagem"><table className="tabela"><thead><tr><th><label className="opcao"><input type="checkbox" aria-label="Marcar todos os ativos" checked={todos} onChange={(e) => setMarcados(e.target.checked ? ativos.map((u) => u.id) : [])} /></label></th><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Colaborador</th><th>Situação</th><th>E-mail de acesso</th><th /></tr></thead>
         <tbody>{(l.dados ?? []).map((u) => (
-          <tr key={u.id} className={u.ativo ? undefined : 'linha-inativa'}><td>{u.nome}</td><td>{u.email}</td><td>{textoPerfil(u.perfil as Perfil, u.tambem_instrutor)}</td><td>{cols.dados?.find((c) => c.id === u.colaborador_id)?.nome ?? 'Sem vínculo'}</td><td>{u.ativo ? 'Ativo' : 'Inativo'}</td>
+          <tr key={u.id} className={u.ativo ? undefined : 'linha-inativa'}>
+            <td>{u.ativo && <label className="opcao"><input type="checkbox" aria-label={`Marcar ${u.nome}`} checked={marcados.includes(u.id)} onChange={(e) => setMarcados(e.target.checked ? [...marcados, u.id] : marcados.filter((x) => x !== u.id))} /></label>}</td>
+            <td>{u.nome}</td><td>{u.email}</td><td>{textoPerfil(u.perfil as Perfil, u.tambem_instrutor)}</td><td>{cols.dados?.find((c) => c.id === u.colaborador_id)?.nome ?? 'Sem vínculo'}</td><td>{u.ativo ? 'Ativo' : 'Inativo'}</td>
+            <td>{textoEnvio(envioDe(u.email))}</td>
             <td className="linha-acoes">
               <button className="botao botao-discreto botao-pequeno" type="button" onClick={() => setEditar(u as Acesso)}>Editar</button>
-              <button className="botao botao-discreto botao-pequeno" type="button" onClick={() => void chamar({ acao: 'link', usuario_id: u.id }).then((r) => setLink(r.link ?? null)).catch((e) => setErro(textoErro(e)))}>Gerar link</button>
+              {u.ativo && <button className="botao botao-discreto botao-pequeno" type="button" disabled={enviando} onClick={() => void enviar([u.id])}>Enviar e-mail de acesso</button>}
               <button className="botao botao-discreto botao-pequeno" type="button" onClick={() => void chamar({ acao: 'ativar', usuario_id: u.id, ativo: !u.ativo }).then(() => l.recarregar()).catch((e) => setErro(textoErro(e)))}>{u.ativo ? 'Desativar' : 'Reativar'}</button>
             </td></tr>
         ))}</tbody></table></div>
       {editar && <EditarAcesso u={editar} pessoas={(l.dados ?? []) as PessoaAcesso[]} colaboradores={cols.dados ?? []} aoFechar={() => setEditar(null)} aoSalvar={() => void l.recarregar()} />}
-      {novo && <NovoAcesso pessoas={(l.dados ?? []) as PessoaAcesso[]} aoFechar={aoFecharNovo} aoCriar={(k) => { setLink(k); void l.recarregar(); }} />}
+      {novo && <NovoAcesso pessoas={(l.dados ?? []) as PessoaAcesso[]} aoFechar={aoFecharNovo} aoCriar={(texto) => { setMsg(texto); void l.recarregar(); void envios.recarregar(); }} />}
     </>
   );
 }
@@ -180,17 +204,20 @@ function EditarAcesso({ u, pessoas, colaboradores, aoFechar, aoSalvar }: { u: Ac
   );
 }
 
-function NovoAcesso({ pessoas, aoFechar, aoCriar }: { pessoas: PessoaAcesso[]; aoFechar: () => void; aoCriar: (link: string | null) => void }) {
+function NovoAcesso({ pessoas, aoFechar, aoCriar }: { pessoas: PessoaAcesso[]; aoFechar: () => void; aoCriar: (texto: string) => void }) {
   const cols = useDados(async () => (await supabase.from('colaboradores').select('id, nome, email').eq('ativo', true).order('nome')).data ?? []);
   const deps = useDados(async () => (await supabase.from('departamentos').select('id, nome').eq('ativo', true).order('nome')).data ?? []);
-  const [nome, setNome] = useState(''); const [email, setEmail] = useState(''); const [opcao, setOpcao] = useState<OpcaoAcesso>('colaborador'); const perfil = perfilDa(opcao); const [col, setCol] = useState(''); const [sel, setSel] = useState<string[]>([]); const [equipe, setEquipe] = useState<string[]>([]); const [treinos, setTreinos] = useState<Vinculo[]>([]);
+  const [nome, setNome] = useState(''); const [email, setEmail] = useState(''); const [opcao, setOpcao] = useState<OpcaoAcesso>('colaborador'); const perfil = perfilDa(opcao); const [col, setCol] = useState(''); const [sel, setSel] = useState<string[]>([]); const [equipe, setEquipe] = useState<string[]>([]); const [treinos, setTreinos] = useState<Vinculo[]>([]); const [mandar, setMandar] = useState(true);
   return (
-    <FormDialogo titulo="Novo acesso" rotulo="Criar acesso" aoFechar={aoFechar} aoEnviar={async () => { const r = await chamar({ acao: 'criar', nome, email, perfil, tambem_instrutor: opcao !== 'admin', colaborador_id: col || null, departamentos: sel, equipe, treinamentos: aplicaTreinamentos(opcao) ? treinos : [] }); aoCriar(r.link ?? null); }}>
+    <FormDialogo titulo="Novo acesso" rotulo="Criar acesso" aoFechar={aoFechar} aoEnviar={async () => { await chamar({ acao: 'criar', nome, email, perfil, tambem_instrutor: opcao !== 'admin', colaborador_id: col || null, departamentos: sel, equipe, treinamentos: aplicaTreinamentos(opcao) ? treinos : [] }); let texto = 'Acesso criado. Envie o e-mail de acesso quando quiser, pela lista.';
+        if (mandar) { const { data: u } = await supabase.from('usuarios').select('id').eq('email', email.trim().toLowerCase()).maybeSingle(); if (u) { await rpc('enviar_email_acesso', { p_usuarios: [u.id] }); texto = 'Acesso criado. O e-mail de acesso entrou na fila e sai na próxima rodada do n8n.'; } }
+        aoCriar(texto); }}>
       <Campo rotulo="Cadastro desta pessoa (opcional)"><select value={col} onChange={(e) => { const c = cols.dados?.find((x) => x.id === e.target.value); setCol(e.target.value); if (c) { setNome(c.nome); setEmail(c.email ?? ''); } }}><option value="">Sem vínculo</option>{(cols.dados ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></Campo>
       <p className="apoio">{ajudaCadastro}</p>
       <Campo rotulo="Nome"><input required value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
       <Campo rotulo="E-mail"><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Campo>
       <SelecaoPerfil valor={opcao} aoMudar={setOpcao} />
+      <label className="opcao"><input type="checkbox" checked={mandar} onChange={(e) => setMandar(e.target.checked)} />Enviar o e-mail de acesso ao criar</label>
       {perfil === 'gestor' && <fieldset className="campo-grupo"><legend>Departamentos</legend><p className="apoio">Quem entrar nestes departamentos passa a aparecer para o gestor sozinho.</p><div className="lista-marcar">{(deps.dados ?? []).map((d) => <label className="opcao" key={d.id}><input type="checkbox" checked={sel.includes(d.id)} onChange={(e) => setSel(e.target.checked ? [...sel, d.id] : sel.filter((x) => x !== d.id))} />{d.nome}</label>)}</div></fieldset>}
       {perfil === 'gestor' && <EscolherEquipe marcados={equipe} aoMudar={setEquipe} />}
       {aplicaTreinamentos(opcao) && <EscolherTreinamentos marcados={treinos} pessoas={pessoas} aoMudar={setTreinos} />}
@@ -247,7 +274,9 @@ function LinhaRegra({ r, aoSalvar }: { r: Regra; aoSalvar: () => void }) {
 
 type Modelo = { tipo: string; nome: string; quando: string; para: string; assunto: string; corpo: string; ativo: boolean; ordem: number };
 const campos: [string, string][] = [['{treinamento}', 'Código de Ética'], ['{data}', '25/11/2026'], ['{horario}', '09:00 às 10:00'], ['{inicio}', '09:00'], ['{sala}', 'Time Forte'], ['{participantes}', 'Analista - Maria Silva\nAssistente - João Souza'], ['{link}', '[Acessar o portal]']];
-const preencher = (t: string) => campos.reduce((s, [c, v]) => s.split(c).join(v), t);
+const camposAcesso: [string, string][] = [['{nome}', 'Maria'], ['{perfil}', 'Instrutor'], ['{email}', 'maria.silva@emais.com'], ['{o_que_voce_faz}', 'No portal, você confirma a agenda dos treinamentos que aplica, registra a presença dos participantes e acompanha o seu calendário.'], ['{link}', 'https://emais-treinamentos.github.io/portal-treinamentos/']];
+const camposDo = (tipo?: string) => (tipo === 'acesso_portal' ? camposAcesso : campos);
+const preencher = (t: string, tipo?: string) => camposDo(tipo).reduce((s, [c, v]) => s.split(c).join(v), t);
 
 function ModelosEmail() {
   const l = useDados(async () => ((await supabase.from('modelos_email').select('*').order('ordem')).data ?? []) as Modelo[]);
@@ -295,12 +324,12 @@ function FormModelo({ m, aoSalvar }: { m: Modelo; aoSalvar: () => void }) {
       <label className="opcao"><input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} /> Enviar este e-mail</label>
       <Campo rotulo="Assunto"><input value={assunto} onChange={(e) => setAssunto(e.target.value)} /></Campo>
       <Campo rotulo="Texto"><textarea rows={14} value={corpo} onChange={(e) => setCorpo(e.target.value)} /></Campo>
-      <p className="modelo-campos">Campos: {campos.map(([c]) => <code key={c}>{c}</code>)}</p>
+      <p className="modelo-campos">Campos: {camposDo(m.tipo).map(([c]) => <code key={c}>{c}</code>)}</p>
       <div className="linha-acoes"><button className="botao" type="button" disabled={salvando || !mudou} onClick={() => void salvar()}>Salvar</button></div>
       <section className="modelo-previa" aria-label="Exemplo do e-mail">
         <h2>Exemplo</h2>
-        <p><strong>{preencher(assunto)}</strong></p>
-        <p className="modelo-corpo">{preencher(corpo)}</p>
+        <p><strong>{preencher(assunto, m.tipo)}</strong></p>
+        <p className="modelo-corpo">{preencher(corpo, m.tipo)}</p>
       </section>
     </div>
   );
