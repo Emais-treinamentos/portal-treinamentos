@@ -65,3 +65,11 @@ Nova extração só de leitura do banco atual, comparada com a de 05/11. Cadastr
 - Turmas abertas recebem os convocados pelo cálculo do portal.
 - As convocações geradas na inclusão foram canceladas, porque o banco atual já tinha enviado os convites.
 - A carga de 05/11 gerou ids novos para cargos e colaboradores. Por isso a ligação é feita pelo nome, com checagem de par único.
+
+## Sincronização de 19/11/2026
+
+Leitura feita no SQL Editor do banco atual, só com consultas de leitura, comparando com a foto de 11/11 por assinatura (md5) de cada tabela e de cada registro. Cadastros, cargos, matriz, movimentações e reciclagens não mudaram. Mudaram só as turmas incluídas em 11/11:
+
+- 7 turmas passaram para realizada, com a presença e o horário registrados no banco atual. As avaliações de satisfação foram geradas no portal.
+- Con1 - Consultivo: agenda confirmada pelo instrutor (17/11, 15:00), sem convite enviado.
+- LGPD: data recusada pelo instrutor, turma marcada para replanejar.
