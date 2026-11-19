@@ -22,7 +22,10 @@ export function EsqueciSenha() {
     setEnviando(false);
     // E-mail sem acesso recebe a mesma resposta, para não revelar quem está cadastrado.
     if (error && /rate limit|too many|seconds/i.test(error.message)) { setErro('Muitos pedidos seguidos. Aguarde um minuto e peça o código de novo.'); return; }
-    if (error && !/signups not allowed|not found|otp/i.test(error.message)) { setErro(mensagemDeErro(error)); return; }
+    // O servidor de e-mail às vezes demora a responder, mas o e-mail costuma sair mesmo assim.
+    const demorou = !!error && ((error as { status?: number }).status === 504 || /504|timeout|deadline/i.test(error.message));
+    if (error && !demorou && !/signups not allowed|not found|otp/i.test(error.message)) { setErro(mensagemDeErro(error)); return; }
+    if (demorou) { setEtapa('codigo'); setAviso('O envio demorou mais que o normal. Confira o e-mail em alguns minutos antes de pedir outro código.'); return; }
     setEtapa('codigo');
     if (e === undefined) setAviso('Enviamos um novo código.');
   }
