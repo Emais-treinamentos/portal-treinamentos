@@ -1,61 +1,70 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase, mensagemDeErro, enderecoDoSite } from '../lib/supabase';
+import { supabase, mensagemDeErro } from '../lib/supabase';
+import { useSessao } from '../lib/sessao';
 import { Moldura } from '../componentes/Moldura';
 
+// Primeiro acesso e troca de senha: código enviado ao e-mail cadastrado, depois a pessoa cria a senha.
 export function EsqueciSenha() {
+  const { marcarRecuperacao } = useSessao();
   const [email, setEmail] = useState('');
+  const [codigo, setCodigo] = useState('');
+  const [etapa, setEtapa] = useState<'email' | 'codigo'>('email');
   const [enviando, setEnviando] = useState(false);
-  const [enviado, setEnviado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const emailLimpo = email.trim().toLowerCase();
 
-  async function enviar(e: FormEvent) {
-    e.preventDefault();
-    setErro(null);
-    setEnviando(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${enderecoDoSite}nova-senha`,
-    });
+  async function pedirCodigo(e?: FormEvent) {
+    e?.preventDefault();
+    setErro(null); setAviso(null); setEnviando(true);
+    const { error } = await supabase.auth.signInWithOtp({ email: emailLimpo, options: { shouldCreateUser: false } });
     setEnviando(false);
-    if (error) setErro(mensagemDeErro(error));
-    else setEnviado(true);
+    // E-mail sem acesso recebe a mesma resposta, para não revelar quem está cadastrado.
+    if (error && /rate limit|too many|seconds/i.test(error.message)) { setErro('Muitos pedidos seguidos. Aguarde um minuto e peça o código de novo.'); return; }
+    if (error && !/signups not allowed|not found|otp/i.test(error.message)) { setErro(mensagemDeErro(error)); return; }
+    setEtapa('codigo');
+    if (e === undefined) setAviso('Enviamos um novo código.');
+  }
+
+  async function confirmar(e: FormEvent) {
+    e.preventDefault();
+    setErro(null); setAviso(null); setEnviando(true);
+    const { error } = await supabase.auth.verifyOtp({ email: emailLimpo, token: codigo.trim(), type: 'email' });
+    setEnviando(false);
+    if (!error) { marcarRecuperacao(true); return; }
+    {
+      setErro(/expired|invalid/i.test(error.message) ? 'Código inválido ou vencido. Confira os números ou peça um novo código.' : mensagemDeErro(error));
+    }
   }
 
   return (
     <Moldura>
-      {enviado ? (
-        <div className="formulario">
-          <h1>Confira seu e-mail</h1>
-          <p className="apoio">
-            Se <strong>{email.trim()}</strong> tiver acesso ao portal, chega em alguns minutos um link para criar a nova
-            senha. Abra o link no mesmo aparelho. Se não aparecer, olhe a caixa de spam.
-          </p>
-          <Link className="link" to="/entrar">Voltar para a entrada</Link>
-        </div>
-      ) : (
-        <form className="formulario" onSubmit={enviar} noValidate>
-          <h1>Criar nova senha</h1>
-          <p className="apoio">Informe o e-mail de acesso. Vamos mandar um link para você criar a senha.</p>
-
+      {etapa === 'email' ? (
+        <form className="formulario" onSubmit={pedirCodigo} noValidate>
+          <h1>Primeiro acesso ou nova senha</h1>
+          <p className="apoio">Informe o e-mail cadastrado pela Gente e Gestão. Vamos mandar um código para você criar a sua senha.</p>
           <label className="campo">
             <span>E-mail</span>
-            <input
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <input type="email" autoComplete="email" inputMode="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </label>
-
           {erro && <p className="aviso aviso-erro" role="alert">{erro}</p>}
-
-          <button className="botao" type="submit" disabled={enviando || !email}>
-            {enviando ? 'Enviando' : 'Enviar link'}
-          </button>
-
+          <button className="botao" type="submit" disabled={enviando || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo)}>{enviando ? 'Enviando' : 'Receber código'}</button>
           <Link className="link" to="/entrar">Voltar para a entrada</Link>
+        </form>
+      ) : (
+        <form className="formulario" onSubmit={confirmar} noValidate>
+          <h1>Digite o código</h1>
+          <p className="apoio">Se <strong>{emailLimpo}</strong> tiver acesso ao portal, chega em instantes um código no e-mail. Se não aparecer, olhe a caixa de spam.</p>
+          <label className="campo">
+            <span>Código</span>
+            <input className="campo-codigo" inputMode="numeric" autoComplete="one-time-code" maxLength={10} required value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))} />
+          </label>
+          {aviso && <p className="aviso aviso-ok" role="status">{aviso}</p>}
+          {erro && <p className="aviso aviso-erro" role="alert">{erro}</p>}
+          <button className="botao" type="submit" disabled={enviando || codigo.length < 6}>{enviando ? 'Conferindo' : 'Continuar'}</button>
+          <button className="link botao-link" type="button" disabled={enviando} onClick={() => void pedirCodigo()}>Enviar outro código</button>
+          <button className="link botao-link" type="button" onClick={() => { setEtapa('email'); setCodigo(''); setErro(null); setAviso(null); }}>Usar outro e-mail</button>
         </form>
       )}
     </Moldura>

@@ -21,11 +21,11 @@ export function NovaSenha() {
     return (
       <Moldura>
         <div className="formulario">
-          <h1>Link vencido</h1>
+          <h1>Acesso vencido</h1>
           <p className="apoio">
-            O link para criar a senha já foi usado ou passou do prazo. Peça um novo e abra no mesmo aparelho.
+            O código ou o link para criar a senha já foi usado ou passou do prazo. Peça um novo código.
           </p>
-          <Link className="botao" to="/esqueci-senha">Pedir novo link</Link>
+          <Link className="botao" to="/esqueci-senha">Pedir novo código</Link>
         </div>
       </Moldura>
     );

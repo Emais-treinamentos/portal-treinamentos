@@ -2587,3 +2587,8 @@ select, input, textarea { max-width: 100%; }
   .lateral .menu { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -6px; padding: 0 6px; scrollbar-width: thin; }
   .lateral-usuario { flex: none; background: var(--superficie); }
 }
+
+/* Código do primeiro acesso */
+.campo-codigo { font-size: 1.4rem; letter-spacing: .35em; text-align: center; font-variant-numeric: tabular-nums; }
+.botao-link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+.botao-link:disabled { opacity: .6; cursor: default; }

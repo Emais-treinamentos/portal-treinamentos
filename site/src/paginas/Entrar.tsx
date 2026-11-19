@@ -52,7 +52,7 @@ export function Entrar() {
           {enviando ? 'Entrando' : 'Entrar'}
         </button>
 
-        <Link className="link" to="/esqueci-senha">Esqueci minha senha</Link>
+        <Link className="link" to="/esqueci-senha">Primeiro acesso ou esqueci a senha</Link>
       </form>
     </Moldura>
   );

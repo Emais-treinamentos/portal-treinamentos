@@ -26,6 +26,7 @@ type ValorSessao = {
   opcoesPerfil: Perfil[];
   escolherPerfil: (p: Perfil | null) => void;
   recuperandoSenha: boolean;
+  marcarRecuperacao: (v: boolean) => void;
   concluirRecuperacao: () => void;
   sair: () => Promise<void>;
 };
@@ -132,6 +133,7 @@ export function ProvedorSessao({ children }: { children: ReactNode }) {
     },
     recuperandoSenha,
     concluirRecuperacao: () => setRecuperandoSenha(false),
+    marcarRecuperacao: setRecuperandoSenha,
     sair: async () => {
       gravarEscolha(null, null);
       setEscolhido(null);
