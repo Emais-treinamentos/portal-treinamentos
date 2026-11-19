@@ -2595,3 +2595,7 @@ select, input, textarea { max-width: 100%; }
 
 /* Envio do e-mail de acesso em lote */
 .acoes-lote { align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.celula-marcar { width: 44px; padding-right: 0 !important; }
+.acoes-acesso { justify-content: flex-end; }
+.acoes-lote .botao { flex: none; }
+.acoes-lote .apoio { flex: 1 1 260px; }

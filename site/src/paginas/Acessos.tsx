@@ -73,20 +73,22 @@ function Usuarios({ novo, aoFecharNovo }: { novo: boolean; aoFecharNovo: () => v
       {msg && <Mensagem tipo="ok" aoFechar={() => setMsg(null)}>{msg}</Mensagem>}
       <div className="linha-acoes acoes-lote">
         <button className="botao botao-pequeno" type="button" disabled={!marcados.length || enviando} onClick={() => void enviar(marcados)}>{enviando ? 'Enviando' : `Enviar e-mail de acesso${marcados.length ? ` (${marcados.length})` : ''}`}</button>
-        <span className="apoio">Marque as pessoas na lista. O e-mail explica o perfil e como criar a senha no primeiro acesso.</span>
+        <span className="apoio">Marque as pessoas e envie em lote. O e-mail explica o perfil e como criar a senha.</span>
       </div>
       {l.carregando && !l.dados && <Carregando />}
-      <div className="tabela-rolagem"><table className="tabela"><thead><tr><th><label className="opcao"><input type="checkbox" aria-label="Marcar todos os ativos" checked={todos} onChange={(e) => setMarcados(e.target.checked ? ativos.map((u) => u.id) : [])} /></label></th><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Colaborador</th><th>Situação</th><th>E-mail de acesso</th><th /></tr></thead>
+      <div className="tabela-rolagem"><table className="tabela"><thead><tr><th className="celula-marcar"><label className="opcao"><input type="checkbox" aria-label="Marcar todos os ativos" checked={todos} onChange={(e) => setMarcados(e.target.checked ? ativos.map((u) => u.id) : [])} /></label></th><th>Pessoa</th><th>Perfil</th><th>Colaborador</th><th>Situação</th><th /></tr></thead>
         <tbody>{(l.dados ?? []).map((u) => (
           <tr key={u.id} className={u.ativo ? undefined : 'linha-inativa'}>
-            <td>{u.ativo && <label className="opcao"><input type="checkbox" aria-label={`Marcar ${u.nome}`} checked={marcados.includes(u.id)} onChange={(e) => setMarcados(e.target.checked ? [...marcados, u.id] : marcados.filter((x) => x !== u.id))} /></label>}</td>
-            <td>{u.nome}</td><td>{u.email}</td><td>{textoPerfil(u.perfil as Perfil, u.tambem_instrutor)}</td><td>{cols.dados?.find((c) => c.id === u.colaborador_id)?.nome ?? 'Sem vínculo'}</td><td>{u.ativo ? 'Ativo' : 'Inativo'}</td>
-            <td>{textoEnvio(envioDe(u.email))}</td>
-            <td className="linha-acoes">
+            <td className="celula-marcar">{u.ativo && <label className="opcao"><input type="checkbox" aria-label={`Marcar ${u.nome}`} checked={marcados.includes(u.id)} onChange={(e) => setMarcados(e.target.checked ? [...marcados, u.id] : marcados.filter((x) => x !== u.id))} /></label>}</td>
+            <td className="celula-principal"><span className="celula-nome">{u.nome}</span><span className="celula-apoio">{u.email}</span></td>
+            <td data-rotulo="Perfil">{textoPerfil(u.perfil as Perfil, u.tambem_instrutor)}</td>
+            <td data-rotulo="Colaborador">{cols.dados?.find((c) => c.id === u.colaborador_id)?.nome ?? 'Sem vínculo'}</td>
+            <td data-rotulo="Situação"><span className="celula-nome">{u.ativo ? 'Ativo' : 'Inativo'}</span><span className="celula-apoio">E-mail de acesso: {textoEnvio(envioDe(u.email)).toLowerCase()}</span></td>
+            <td><div className="linha-acoes acoes-acesso">
               <button className="botao botao-discreto botao-pequeno" type="button" onClick={() => setEditar(u as Acesso)}>Editar</button>
-              {u.ativo && <button className="botao botao-discreto botao-pequeno" type="button" disabled={enviando} onClick={() => void enviar([u.id])}>Enviar e-mail de acesso</button>}
+              {u.ativo && <button className="botao botao-discreto botao-pequeno" type="button" disabled={enviando} onClick={() => void enviar([u.id])}>Enviar acesso</button>}
               <button className="botao botao-discreto botao-pequeno" type="button" onClick={() => void chamar({ acao: 'ativar', usuario_id: u.id, ativo: !u.ativo }).then(() => l.recarregar()).catch((e) => setErro(textoErro(e)))}>{u.ativo ? 'Desativar' : 'Reativar'}</button>
-            </td></tr>
+            </div></td></tr>
         ))}</tbody></table></div>
       {editar && <EditarAcesso u={editar} pessoas={(l.dados ?? []) as PessoaAcesso[]} colaboradores={cols.dados ?? []} aoFechar={() => setEditar(null)} aoSalvar={() => void l.recarregar()} />}
       {novo && <NovoAcesso pessoas={(l.dados ?? []) as PessoaAcesso[]} aoFechar={aoFecharNovo} aoCriar={(texto) => { setMsg(texto); void l.recarregar(); void envios.recarregar(); }} />}
