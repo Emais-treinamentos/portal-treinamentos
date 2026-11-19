@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase, mensagemDeErro } from '../lib/supabase';
+import { supabase, mensagemDeErro, enderecoDoSite } from '../lib/supabase';
 import { useSessao } from '../lib/sessao';
 import { Moldura } from '../componentes/Moldura';
 
@@ -18,7 +18,7 @@ export function EsqueciSenha() {
   async function pedirCodigo(e?: FormEvent) {
     e?.preventDefault();
     setErro(null); setAviso(null); setEnviando(true);
-    const { error } = await supabase.auth.signInWithOtp({ email: emailLimpo, options: { shouldCreateUser: false } });
+    const { error } = await supabase.auth.signInWithOtp({ email: emailLimpo, options: { shouldCreateUser: false, emailRedirectTo: `${enderecoDoSite}nova-senha` } });
     setEnviando(false);
     // E-mail sem acesso recebe a mesma resposta, para não revelar quem está cadastrado.
     if (error && /rate limit|too many|seconds/i.test(error.message)) { setErro('Muitos pedidos seguidos. Aguarde um minuto e peça o código de novo.'); return; }
@@ -55,7 +55,7 @@ export function EsqueciSenha() {
       ) : (
         <form className="formulario" onSubmit={confirmar} noValidate>
           <h1>Digite o código</h1>
-          <p className="apoio">Se <strong>{emailLimpo}</strong> tiver acesso ao portal, chega em instantes um código no e-mail. Se não aparecer, olhe a caixa de spam.</p>
+          <p className="apoio">Se <strong>{emailLimpo}</strong> tiver acesso ao portal, chega em instantes um e-mail com o código. Se o e-mail trouxer um link em vez do código, basta abrir o link neste aparelho. Se não aparecer, olhe a caixa de spam.</p>
           <label className="campo">
             <span>Código</span>
             <input className="campo-codigo" inputMode="numeric" autoComplete="one-time-code" maxLength={10} required value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))} />
