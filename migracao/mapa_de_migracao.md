@@ -83,3 +83,5 @@ Leitura feita no SQL Editor do banco atual, só com consultas de leitura, compar
 - Maria Luiza e Renan: reciclagem passou para dispensa (termos assinados fora do portal em 12/08 e 08/06).
 - Gabriele Corrêa Trovó: cadastro inativado no portal por ter sido usado como teste.
 - E-mails de convocação e avaliação dessas baixas foram cancelados. Ficaram só os pedidos de assinatura da lista de presença.
+- Ajustes de 23/11 (tarde): Consultivo de 24/11 com o Luiz (conforme a matriz), sem o Vitor. Boas Vindas Área do Gabriel com a Marcela Zanateli. Turmas abertas do Rodrigo (Código de Ética 20/10 e Boas Vindas Área 07/10) concluídas com presença.
+- Regra: cargo sem matriz na data de referência passa a usar a primeira matriz publicada para o cargo (migração 027). Caso da Maria Clara.
