@@ -73,3 +73,13 @@ Leitura feita no SQL Editor do banco atual, só com consultas de leitura, compar
 - 7 turmas passaram para realizada, com a presença e o horário registrados no banco atual. As avaliações de satisfação foram geradas no portal.
 - Con1 - Consultivo: agenda confirmada pelo instrutor (17/11, 15:00), sem convite enviado.
 - LGPD: data recusada pelo instrutor, turma marcada para replanejar.
+
+## Baixas de 23/11/2026 (pedido de Gente e Gestão)
+
+- Código de Ética de 13/11: Luiz Fernando e Vitor presentes, turma realizada às 11h.
+- LGPD e Consultivo remarcados para 24/11 (14h e 15h). Consultivo só com o Vitor.
+- Regra: treinamento da lista de uma reciclagem parcial só conta se estiver na matriz vigente na data de referência (migração 026). Tirou o POP indevido de Bruno, Francieli e Marcos.
+- Presenças informadas por Gente e Gestão gravadas para Daniela, Francieli, Gabriel, Gabriela, José Kemyson, Maria Clara e Taissa. Onde não havia turma realizada na data, foi criada uma turma realizada com o instrutor usual do treinamento.
+- Maria Luiza e Renan: reciclagem passou para dispensa (termos assinados fora do portal em 12/08 e 08/06).
+- Gabriele Corrêa Trovó: cadastro inativado no portal por ter sido usado como teste.
+- E-mails de convocação e avaliação dessas baixas foram cancelados. Ficaram só os pedidos de assinatura da lista de presença.
