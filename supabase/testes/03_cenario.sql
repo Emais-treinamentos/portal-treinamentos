@@ -526,5 +526,67 @@ begin
   execute 'reset role';
   delete from turmas where id = v_t; delete from avisos_lidos;
 end $x$;
+
+-- Turma online: evento no calendário do Outlook
+do $x$
+declare v_t uuid; v_t2 uuid; v_tr uuid; v_c1 uuid; v_c2 uuid; v_cg uuid; v_r jsonb; v_id bigint; v_inst text := 'gestor.teste@example.com';
+begin
+  execute 'reset role';
+  select id into v_tr from treinamentos where ativo order by nome limit 1;
+  select id, cargo_id into v_c1, v_cg from colaboradores where ativo order by nome limit 1;
+  select id into v_c2 from colaboradores where ativo and id <> v_c1 order by nome limit 1;
+  update colaboradores set email = coalesce(email, 'c' || left(id::text, 6) || '@example.com') where id in (v_c1, v_c2);
+  insert into turmas (treinamento_id, status, data, hora_inicio, hora_opcao_1, sala, instrutor_email) values (v_tr, 'agenda_confirmada', app.hoje() + 20, '10:00', '10:00', 'Online (Teams)', v_inst) returning id into v_t;
+  insert into turma_participantes (turma_id, colaborador_id, cargo_na_data_id, situacao, origem) values (v_t, v_c1, v_cg, 'convocado', 'manual'), (v_t, v_c2, v_cg, 'convocado', 'manual');
+  perform teste.ok('online: nada antes de formalizar', not exists (select 1 from calendario_eventos where turma_id = v_t));
+  update turmas set status = 'convite_enviado', convite_enviado_em = now() where id = v_t;
+  perform teste.ok('online: formalizar pede criar', (select count(*) from calendario_eventos where turma_id = v_t and acao = 'criar' and status = 'pendente') = 1);
+  v_r := calendario_para_processar(20);
+  select (x->>'id')::bigint into v_id from jsonb_array_elements(v_r) x where (x->>'acao') = 'criar';
+  perform teste.ok('online: n8n recebe o criar', v_id is not null);
+  perform teste.ok('online: convidados = instrutor + 2', (select jsonb_array_length(x->'participantes') from jsonb_array_elements(v_r) x where (x->>'id')::bigint = v_id) = 3);
+  perform teste.ok('online: horário com fim pela carga', (select x->>'inicio' from jsonb_array_elements(v_r) x where (x->>'id')::bigint = v_id) like '%T10:00:00');
+  perform teste.ok('online: não entrega duas vezes', not exists (select 1 from jsonb_array_elements(calendario_para_processar(20)) x where (x->>'id')::bigint = v_id));
+  update turmas set hora_inicio = '11:00', hora_opcao_1 = '11:00' where id = v_t;
+  perform teste.ok('online: mudança durante a criação vira atualizar', exists (select 1 from calendario_eventos where turma_id = v_t and acao = 'atualizar' and status = 'pendente'));
+  perform teste.ok('online: atualizar espera o criar terminar', not exists (select 1 from jsonb_array_elements(calendario_para_processar(20)) x where (x->>'acao') = 'atualizar' and (x->>'id')::bigint in (select id from calendario_eventos where turma_id = v_t)));
+  perform registrar_calendario(v_id, true, null, 'EVT-1', 'https://teams.example/abc');
+  perform teste.ok('online: evento e link gravados', (select outlook_evento_id = 'EVT-1' and link_reuniao like 'https://teams%' from turmas where id = v_t));
+  v_r := calendario_para_processar(20);
+  select (x->>'id')::bigint into v_id from jsonb_array_elements(v_r) x where x->>'acao' = 'atualizar' and x->>'evento_id' = 'EVT-1';
+  perform teste.ok('online: atualizar sai com o id do evento', v_id is not null);
+  perform registrar_calendario(v_id, true);
+  perform teste.ok('online: confirmar não gera laço', not exists (select 1 from calendario_eventos where turma_id = v_t and status = 'pendente'));
+  delete from turma_participantes where turma_id = v_t and colaborador_id = v_c2;
+  perform teste.ok('online: tirar participante atualiza convite', exists (select 1 from calendario_eventos where turma_id = v_t and acao = 'atualizar' and status = 'pendente'));
+  update turmas set sala = 'Externo' where id = v_t;
+  perform teste.ok('online: virar presencial cancela evento', exists (select 1 from calendario_eventos where turma_id = v_t and acao = 'cancelar' and status = 'pendente')
+    and not exists (select 1 from calendario_eventos where turma_id = v_t and acao = 'atualizar' and status = 'pendente'));
+  select (x->>'id')::bigint into v_id from jsonb_array_elements(calendario_para_processar(20)) x where x->>'acao' = 'cancelar' and x->>'evento_id' = 'EVT-1';
+  perform registrar_calendario(v_id, false, 'falha 1');
+  perform teste.ok('online: falha volta para a fila', (select status from calendario_eventos where id = v_id) = 'pendente');
+  perform calendario_para_processar(20); perform registrar_calendario(v_id, false, 'falha 2');
+  perform calendario_para_processar(20); perform registrar_calendario(v_id, false, 'falha 3');
+  perform teste.ok('online: 3 falhas param em erro', (select status from calendario_eventos where id = v_id) = 'erro');
+  update calendario_eventos set status = 'pendente', tentativas = 0 where id = v_id;
+  perform calendario_para_processar(20); perform registrar_calendario(v_id, true);
+  perform teste.ok('online: cancelar limpa evento e link', (select outlook_evento_id is null and link_reuniao is null from turmas where id = v_t));
+  -- Duas turmas online no mesmo horário não disputam sala.
+  insert into turmas (treinamento_id, status, data, hora_inicio, hora_opcao_1, sala, instrutor_email) values (v_tr, 'agenda_confirmada', app.hoje() + 20, '11:00', '11:00', 'Online (Teams)', 'outro.instrutor@example.com') returning id into v_t2;
+  update turmas set sala = 'Online (Teams)' where id = v_t;
+  perform teste.ok('online: sem conflito de sala', not exists (select 1 from jsonb_array_elements(conflitos_turma(v_t2)) x where x->>'tipo' = 'sala'));
+  perform teste.ok('online: e-mail mostra Teams', (app.montar_email('convocacao_colaborador', v_t2)->>'corpo_html') like '%Microsoft Teams%');
+  -- Cancelar uma turma cujo evento ainda está sendo criado: o cancelamento espera e sai depois.
+  perform calendario_para_processar(20);
+  select id into v_id from calendario_eventos where turma_id = v_t and acao = 'criar' and status = 'processando';
+  update turmas set status = 'cancelada' where id = v_t;
+  perform teste.ok('online: cancelar durante a criação fica na fila', exists (select 1 from calendario_eventos where turma_id = v_t and acao = 'cancelar' and status = 'pendente'));
+  perform registrar_calendario(v_id, true, null, 'EVT-2', null);
+  perform teste.ok('online: depois do criar sai o cancelar', exists (select 1 from jsonb_array_elements(calendario_para_processar(20)) x where x->>'acao' = 'cancelar' and x->>'evento_id' = 'EVT-2'));
+  -- Turma presencial nunca gera evento.
+  update turmas set sala = 'Time Forte', status = 'convite_enviado' where id = v_t2;
+  perform teste.ok('presencial: sem evento', not exists (select 1 from calendario_eventos where turma_id = v_t2));
+  delete from turmas where id in (v_t, v_t2);
+end $x$;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);

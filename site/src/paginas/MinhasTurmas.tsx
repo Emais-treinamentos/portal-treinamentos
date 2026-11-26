@@ -5,7 +5,7 @@ import { Campo, Farol, FormDialogo, SeloSituacao } from '../componentes/Pecas';
 import { Dialogo } from '../componentes/Dialogo';
 import { Calendario, type EventoCal } from '../componentes/Calendario';
 import { baixarIcs, linkOutlook, type EventoAgenda } from '../lib/calendario';
-import { cargaTexto, dataBR, hora, horaFim, nomesStatus, nomesTipoSolicitacao, rpc, textoErro, useDados, type TurmaDetalhe } from '../lib/api';
+import { cargaTexto, dataBR, ehOnline, hora, horaFim, nomesStatus, nomesTipoSolicitacao, rpc, textoErro, useDados, type TurmaDetalhe } from '../lib/api';
 
 type Minha = { id: string; treinamento: string; status: string; etapa: string; data: string | null; hora: string | null; sala: string | null; participantes: number; pendentes: number; solicitacao_aberta: boolean };
 
@@ -154,13 +154,14 @@ export function PainelInstrutor({ id, aoMudar, consulta = false }: { id: string;
         <div><dt>Data</dt><dd>{dataBR(t.data)}</dd></div>
         <div><dt>Horário</dt><dd>{t.hora_inicio ? `${hora(h)} às ${horaFim(h, t.carga_minutos)}` : 'A confirmar'}</dd></div>
         <div><dt>Carga</dt><dd>{cargaTexto(t.carga_minutos)}</dd></div>
-        <div><dt>Sala</dt><dd>{t.sala ?? 'A definir'}</dd></div>
+        <div><dt>Sala</dt><dd>{t.sala ?? 'A definir'}{ehOnline(t.sala) && t.link_reuniao && <> · <a href={t.link_reuniao} target="_blank" rel="noreferrer">Entrar no Teams</a></>}</dd></div>
       </dl>
+      {ehOnline(t.sala) && t.outlook_evento_id && <p className="aviso aviso-info">O convite com o link do Teams já está na sua agenda do Outlook e é atualizado sozinho se a turma mudar.</p>}
       {erro && <p className="aviso aviso-erro" role="alert">{erro}</p>}
       {aberta && <p className="aviso aviso-info">Sua solicitação de {nomesTipoSolicitacao[aberta.tipo].toLowerCase()} está com Gente e Gestão.</p>}
       {ultima && !aberta && <p className="aviso aviso-info">Última solicitação {ultima.status === 'aprovada' ? 'aprovada' : 'recusada'}{ultima.resposta ? `: ${ultima.resposta}` : ''}.</p>}
 
-      {!!t.hora_inicio && !!t.inicio && !!t.fim && ['agenda_confirmada', 'convite_enviado'].includes(t.status) && t.etapa !== 'presenca' && (
+      {!!t.hora_inicio && !!t.inicio && !!t.fim && ['agenda_confirmada', 'convite_enviado'].includes(t.status) && t.etapa !== 'presenca' && !(ehOnline(t.sala) && t.outlook_evento_id) && (
         <div className="linha-acoes">
           <a className="botao botao-secundario" href={linkOutlook(paraAgenda(t))} target="_blank" rel="noreferrer">Adicionar ao Outlook</a>
           <button className="botao botao-discreto" type="button" onClick={() => baixarIcs([paraAgenda(t)], `treinamento_${t.id.slice(0, 8)}.ics`)}>Baixar arquivo .ics</button>
@@ -265,7 +266,7 @@ function Remarcar({ t, aoFechar, aoSalvar }: { t: TurmaDetalhe; aoFechar: () => 
       )}
       {v.erro && <p className="aviso aviso-erro">{v.erro}</p>}
       <Campo rotulo="Motivo"><textarea required rows={2} value={motivo} onChange={(e) => setMotivo(e.target.value)} /></Campo>
-      <p className="apoio">Gente e Gestão recebe um aviso. Se o treinamento já está no seu Outlook, atualize o evento depois de remarcar.</p>
+      <p className="apoio">Gente e Gestão recebe um aviso. {ehOnline(t.sala) && t.outlook_evento_id ? 'O convite do Teams é atualizado sozinho na agenda de todos.' : 'Se o treinamento já está no seu Outlook, atualize o evento depois de remarcar.'}</p>
     </FormDialogo>
   );
 }

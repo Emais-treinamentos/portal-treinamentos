@@ -84,7 +84,8 @@ export type Pessoa = { colaborador_id: string; nome: string; cargo: string | nul
 export type Solicitacao = { id: string; tipo: string; motivo: string; proposta: { data?: string; hora?: string; sala?: string; instrutor_email?: string }; status: string; resposta: string | null; solicitado_em: string };
 export type TurmaDetalhe = {
   id: string; treinamento_id: string; treinamento: string; carga_minutos: number; etapa: Etapa; status: string; tipo: string; data: string | null; hora_opcao_1: string | null; hora_opcao_2: string | null; hora_inicio: string | null;
-  sala: string | null; instrutor_email: string; motivo_replanejamento: string | null; inicio: string | null; fim: string | null; sou_instrutor: boolean; instrutor_tem_acesso: boolean; presenca_concluida_em: string | null;
+  sala: string | null; link_reuniao?: string | null; outlook_evento_id?: string | null;
+  calendario?: { acao: string; status: string; erro: string | null; quando: string } | null; instrutor_email: string; motivo_replanejamento: string | null; inicio: string | null; fim: string | null; sou_instrutor: boolean; instrutor_tem_acesso: boolean; presenca_concluida_em: string | null;
   cargos: { cargo_id: string; nome: string; incluir: boolean; elegiveis: number }[];
   participantes: Pessoa[]; solicitacoes: Solicitacao[]; conflitos: { tipo: string; turma_id: string; treinamento: string }[];
 };
@@ -96,3 +97,12 @@ export type SituacaoColaborador = {
   movimentacoes: { cargo: string; data_inicio: string; data_fim: string | null; tipo: string }[];
   decisao: { acao_final: string; tipo_movimentacao: string; decidido_em: string; cargo_anterior_id: string | null } | null;
 };
+
+// Turma online pelo Teams: a sala escolhida é "Online (Teams)".
+export const ehOnline = (sala: string | null | undefined) => !!sala && (/^online/i.test(sala) || /teams/i.test(sala));
+export function textoConviteTeams(t: { outlook_evento_id?: string | null; calendario?: { acao: string; status: string; erro: string | null } | null }) {
+  const c = t.calendario;
+  if (c && c.status === 'erro') return `Convite do Teams com erro: ${c.erro ?? 'falha no Outlook'}. Confira o fluxo de calendário no n8n.`;
+  if (c && (c.status === 'pendente' || c.status === 'processando')) return c.acao === 'cancelar' ? 'Cancelamento do evento do Teams na fila.' : c.acao === 'atualizar' ? 'Atualização do convite do Teams na fila.' : 'Convite do Teams na fila de envio.';
+  return t.outlook_evento_id ? 'Convite do Teams enviado para a agenda do instrutor e dos participantes.' : 'O convite do Teams sai quando a turma for formalizada.';
+}

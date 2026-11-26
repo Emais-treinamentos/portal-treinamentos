@@ -3,7 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { Pagina, Mensagem, VoltarLista } from '../componentes/Pagina';
 import { Carregando } from '../componentes/Carregando';
 import { Campo, Farol, FormDialogo, SeloSituacao } from '../componentes/Pecas';
-import { cargaTexto, dataBR, hora, horaFim, nomesEtapa, nomesStatus, nomesTipoSolicitacao, rpc, textoErro, useDados, type Etapa, type Solicitacao, type TurmaDetalhe } from '../lib/api';
+import { cargaTexto, dataBR, ehOnline, hora, horaFim, textoConviteTeams, nomesEtapa, nomesStatus, nomesTipoSolicitacao, rpc, textoErro, useDados, type Etapa, type Solicitacao, type TurmaDetalhe } from '../lib/api';
 import { gerarListaPresenca } from '../lib/documentos';
 import { supabase } from '../lib/supabase';
 import { Dialogo } from '../componentes/Dialogo';
@@ -139,8 +139,9 @@ export function PainelTurma({ id, admin, aoMudar }: { id: string; admin: boolean
         <div><dt>Horário</dt><dd>{t.hora_inicio ? `${hora(h)} às ${horaFim(h, t.carga_minutos)}` : [hora(t.hora_opcao_1), hora(t.hora_opcao_2)].filter(Boolean).join(' ou ')}</dd></div>
         <div><dt>Carga</dt><dd>{cargaTexto(t.carga_minutos)}</dd></div>
         <div><dt>Instrutor</dt><dd>{t.instrutor_email}</dd></div>
-        <div><dt>Sala</dt><dd>{t.sala ?? 'Não definida'}</dd></div>
+        <div><dt>Sala</dt><dd>{t.sala ?? 'Não definida'}{ehOnline(t.sala) && t.link_reuniao && <> · <a href={t.link_reuniao} target="_blank" rel="noreferrer">Link do Teams</a></>}</dd></div>
       </dl>
+      {ehOnline(t.sala) && <p className={t.calendario?.status === 'erro' ? 'aviso aviso-erro' : 'aviso aviso-info'}>{textoConviteTeams(t)}</p>}
       {erro && <p className="aviso aviso-erro" role="alert">{erro}</p>}
       {!t.instrutor_tem_acesso && aberta && <p className="aviso aviso-alerta">Este e-mail não tem perfil de instrutor no portal. Ajuste em Acessos para ele poder responder.</p>}
       {t.motivo_replanejamento && <p className="aviso aviso-alerta">{t.motivo_replanejamento}</p>}
