@@ -11,9 +11,10 @@ type Proposta = { data?: string; hora?: string; sala?: string; instrutor_email?:
 type Pedido = { id: string; tipo: string; motivo: string; proposta: Proposta; solicitado_em: string; solicitante: string; turma_id: string; treinamento: string; data: string | null; hora: string | null; sala: string | null; instrutor_email: string; status_turma: string; participantes: Participante[] | null };
 type Comentario = { id: string; treinamento: string; data: string | null; instrutor_email: string; nota: number; melhorias: string[]; comentario: string | null; respondido_em: string | null; lido: boolean };
 type Historico = { id: string; tipo: string; status: string; motivo: string; resposta: string | null; proposta: Proposta; solicitado_em: string; decidido_em: string; solicitante: string; decidido_por: string | null; automatico: boolean; turma_id: string; treinamento: string; data: string | null };
-type Painel = { pedidos: Pedido[]; comentarios: Comentario[]; historico: Historico[] };
+type Remarcacao = { id: string; motivo: string; proposta: Proposta; decidido_em: string; solicitante: string; turma_id: string; treinamento: string; data: string | null; hora: string | null; status_turma: string; instrutor_email: string; lido: boolean };
+type Painel = { pedidos: Pedido[]; remarcacoes: Remarcacao[]; comentarios: Comentario[]; historico: Historico[] };
 
-const abas = [['pedidos', 'Pedidos dos instrutores'], ['comentarios', 'Comentários dos colaboradores'], ['historico', 'Histórico']] as const;
+const abas = [['pedidos', 'Pedidos dos instrutores'], ['remarcacoes', 'Remarcações'], ['comentarios', 'Comentários dos colaboradores'], ['historico', 'Histórico']] as const;
 const quando = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 const textoProposta = (p: Proposta) => [p.data && `data ${dataBR(p.data)}`, p.hora && `horário ${hora(p.hora)}`, p.sala && `sala ${p.sala}`, p.instrutor_email && `instrutor ${p.instrutor_email}`].filter(Boolean).join(', ');
 
@@ -25,12 +26,13 @@ export function Notificacoes() {
   const [erro, setErro] = useState<string | null>(null);
   const recarregar = () => { void d.recarregar(); avisarNotificacoes(); };
   const naoLidos = (d.dados?.comentarios ?? []).filter((c) => !c.lido);
-  const ler = async (ids: string[]) => {
-    try { await rpc('marcar_lido', { p_chaves: ids.map((i) => `avaliacao:${i}`) }); recarregar(); } catch (e) { setErro(textoErro(e)); }
+  const remNaoLidas = (d.dados?.remarcacoes ?? []).filter((r) => !r.lido);
+  const ler = async (ids: string[], prefixo = 'avaliacao') => {
+    try { await rpc('marcar_lido', { p_chaves: ids.map((i) => `${prefixo}:${i}`) }); recarregar(); } catch (e) { setErro(textoErro(e)); }
   };
-  const contagem = { pedidos: d.dados?.pedidos.length ?? 0, comentarios: naoLidos.length, historico: 0 };
+  const contagem = { pedidos: d.dados?.pedidos.length ?? 0, remarcacoes: remNaoLidas.length, comentarios: naoLidos.length, historico: 0 };
   return (
-    <Pagina titulo="Notificações" apoio="Pedidos dos instrutores para decidir e comentários das avaliações de satisfação. Mostra os últimos 60 dias.">
+    <Pagina titulo="Notificações" apoio="Pedidos dos instrutores para decidir, remarcações feitas por eles e comentários das avaliações de satisfação. Mostra os últimos 60 dias.">
       {msg && <Mensagem tipo="ok" aoFechar={() => setMsg(null)}>{msg}</Mensagem>}
       {(erro || d.erro) && <Mensagem tipo="erro" aoFechar={() => setErro(null)}>{erro ?? d.erro}</Mensagem>}
       <div className="chips chips-filtro" role="group" aria-label="Notificações">
@@ -54,6 +56,23 @@ export function Notificacoes() {
         ))}</div> : <p className="vazio">Nenhum pedido aberto.</p>
       )}
 
+      {d.dados && aba === 'remarcacoes' && (
+        <>
+          <p className="apoio">Dentro do prazo, o instrutor remarca a turma sem precisar de aprovação. A nova data já vale e os participantes são avisados por e-mail.</p>
+          {remNaoLidas.length > 1 && <div className="linha-acoes"><button className="botao botao-discreto botao-pequeno" type="button" onClick={() => void ler(remNaoLidas.map((r) => r.id), 'remarcacao')}>Marcar todas como lidas</button></div>}
+          {d.dados.remarcacoes.length ? <div className="lista-avisos">{d.dados.remarcacoes.map((r) => (
+            <article className={`cartao-aviso${r.lido ? ' cartao-lido' : ''}`} key={r.id}>
+              <header><strong>{r.treinamento}</strong><small>{quando(r.decidido_em)}</small></header>
+              <p className="apoio">{r.solicitante} remarcou de {dataBR(r.proposta.data_anterior ?? null)}{r.proposta.hora_anterior ? ` às ${hora(r.proposta.hora_anterior)}` : ''} para {dataBR(r.proposta.data ?? r.data)}{r.proposta.hora ? ` às ${hora(r.proposta.hora)}` : ''}.</p>
+              {r.motivo && <p className="cartao-aviso-citacao">{r.motivo}</p>}
+              <div className="linha-acoes">
+                <Link className="botao botao-discreto botao-pequeno" to={`/turmas?turma=${r.turma_id}`}>Ver turma</Link>
+                {!r.lido && <button className="botao botao-discreto botao-pequeno" type="button" onClick={() => void ler([r.id], 'remarcacao')}>Marcar como lido</button>}
+              </div>
+            </article>
+          ))}</div> : <p className="vazio">Nenhuma remarcação nos últimos 60 dias.</p>}
+        </>
+      )}
       {d.dados && aba === 'comentarios' && (
         <>
           <p className="apoio">As respostas são anônimas. Aparecem só as avaliações com comentário ou ponto de melhoria.</p>

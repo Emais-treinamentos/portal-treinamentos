@@ -588,5 +588,27 @@ begin
   perform teste.ok('presencial: sem evento', not exists (select 1 from calendario_eventos where turma_id = v_t2));
   delete from turmas where id in (v_t, v_t2);
 end $x$;
+
+-- Remarcação feita pelo instrutor aparece em Notificações até dar ciência
+do $x$
+declare v_t uuid; v_tr uuid; v_s uuid; v_u uuid; v_antes integer;
+begin
+  execute 'reset role';
+  select id into v_tr from treinamentos where ativo order by nome limit 1;
+  select id into v_u from usuarios where email = 'gestor.teste@example.com';
+  insert into turmas (treinamento_id, status, data, hora_inicio, instrutor_email) values (v_tr, 'agenda_confirmada', app.hoje() + 10, '16:00', 'gestor.teste@example.com') returning id into v_t;
+  perform teste.como('gestao.teste@example.com');
+  v_antes := contar_notificacoes();
+  execute 'reset role';
+  insert into turma_solicitacoes (turma_id, tipo, motivo, proposta, status, solicitado_por, decidido_por, decidido_em, resposta)
+    values (v_t, 'alteracao', 'Agenda indisponível', jsonb_build_object('data', app.hoje() + 10, 'hora', '16:00', 'data_anterior', app.hoje() + 11, 'hora_anterior', '15:00'), 'aprovada', v_u, v_u, now(), 'Remarcado pelo instrutor dentro das regras') returning id into v_s;
+  perform teste.como('gestao.teste@example.com');
+  perform teste.ok('remarcação do instrutor aparece em Notificações', exists (select 1 from jsonb_array_elements(painel_notificacoes(60)->'remarcacoes') x where (x->>'id')::uuid = v_s and not (x->>'lido')::boolean));
+  perform teste.ok('remarcação conta no sino', contar_notificacoes() = v_antes + 1);
+  perform marcar_lido(array['remarcacao:' || v_s]);
+  perform teste.ok('ciência tira do sino', contar_notificacoes() = v_antes);
+  execute 'reset role';
+  delete from turmas where id = v_t; delete from avisos_lidos;
+end $x$;
 select teste.ok('nenhum participante sem pessoa', not exists (select 1 from turma_participantes where colaborador_id is null));
 select teste.ok('histórico registrado', (select count(*) from eventos) > 0);
