@@ -86,3 +86,10 @@ Leitura feita no SQL Editor do banco atual, só com consultas de leitura, compar
 - Ajustes de 23/11 (tarde): Consultivo de 24/11 com o Luiz (conforme a matriz), sem o Vitor. Boas Vindas Área do Gabriel com a Marcela Zanateli. Turmas abertas do Rodrigo (Código de Ética 20/10 e Boas Vindas Área 07/10) concluídas com presença.
 - Regra: cargo sem matriz na data de referência passa a usar a primeira matriz publicada para o cargo (migração 027). Caso da Maria Clara.
 - 11 turmas antigas (junho a outubro) sem convocados foram canceladas direto no banco, sem e-mail. As realizações dessas pessoas já estavam na lista de presença.
+
+## Turma online pelo Teams (26/11/2026)
+
+- Sala "Online (Teams)" marca a turma como online. Ela não disputa sala com outras turmas.
+- Fila calendario_eventos: o banco decide sozinho se falta criar, atualizar ou cancelar o evento do Outlook a cada mudança na turma ou nos participantes.
+- Fluxo do n8n "Portal de Treinamentos - Calendário Teams" (a cada 5 minutos): busca a fila, cria, atualiza ou cancela o evento pela API do Microsoft 365 com a credencial "Outlook Treinamentos GG" e devolve o id do evento e o link do Teams.
+- Testado em 26/11 com uma turma de teste: criar, atualizar horário e cancelar. A turma de teste foi apagada.
